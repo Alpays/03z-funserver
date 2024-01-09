@@ -8,6 +8,7 @@ class PlayerData
 	diePosEnabled = true;
 	lastDeathPos  = null;
 	spawnWeapons  = null;
+	spree = 0;
 }
 
 function PlayerData::constructor()

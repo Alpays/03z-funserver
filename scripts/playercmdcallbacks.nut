@@ -484,3 +484,27 @@ function CmdCallback_FlyingCars(player, cmdText, arguments)
 		return;
 	}
 }
+
+function CmdCallback_Spree(player, cmdText, arguments) {
+	local playerlist = "";
+	local count = 0;
+	for(local i = 0; i < 32; ++i) {
+		local p = FindPlayer(i)
+		if(p)
+		{
+			local playerData = GetPlayerData(p)
+			if(playerData.spree >= 5) {
+				playerlist += p.Name + " (" + playerData.spree + ") ";
+				++count;
+			}			
+		}
+	}
+	if(count == 0) {
+		ErrorMessage("No players are on spree!", player);
+	}
+
+	else {
+		Message("[SPREE] " + playerlist);
+		Message("Requested by " + player.Name + ".");
+	}
+}

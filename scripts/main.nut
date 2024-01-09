@@ -42,6 +42,7 @@ function onScriptLoad()
 	AddPlayerCmd(["waterlevel", "wl"],                    CmdCallback_WaterLevel);
 	AddPlayerCmd(["driveonwater", "dow"],                 CmdCallback_DriveOnWater);
 	AddPlayerCmd(["flyingcars", "fc"],                    CmdCallback_FlyingCars);
+	AddPlayerCmd(["spree"],								  CmdCallback_Spree);
 
 	print(SERVER_NAME + " has initialized.");
 }
@@ -95,8 +96,42 @@ function onPlayerSpawn(player)
 function onPlayerDeath(player, reason)
 {
 	local playerData = GetPlayerData(player);
+
 	local playerPos = player.Pos;
 	playerData.lastDeathPos = (reason != WEP_DROWNED) ? playerPos : null;
+
+	if(playerData.spree >= 5) 
+	{
+		Message(player.Name + "'s killing spree of " + playerData.spree + " has been ended!")
+	}
+	playerData.spree = 0;
+}
+
+function onPlayerKilled(killer, player, reason, bodypart) {
+	local killerData = GetPlayerData(killer);
+	local playerData = GetPlayerData(player);
+
+	killerData.spree += 1;
+
+	killer.Score += 1;
+	killer.Money += 500;
+	player.Money -= 250;
+
+	playerData.lastDeathPos = player.Pos;
+
+	if(killerData.spree % 5 == 0)
+	{
+		local reward = killerData.spree * 100;
+		Message(killer.Name + " is on a killing spree of " + killerData.spree + "! ($" + reward + ")" )
+		killer.Money += reward;
+		Announce("~o~Killing spree!", killer, 5)
+	}
+
+	if(playerData.spree >= 5) 
+	{
+		Message(player.Name + "'s killing spree of " + playerData.spree + " has been ended by " + killer.Name + "!")
+	}
+	playerData.spree = 0;
 }
 
 function onPlayerCommand(player, cmdText, arguments)
