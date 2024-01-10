@@ -38,7 +38,7 @@ function CmdCallback_Credits(player, cmdText, arguments)
 	Message("Requested by " + player.Name + ".");
 }
 
-function CmdCallback_Diepos(player, cmdText, arguments)
+function CmdCallback_DiePos(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -485,10 +485,17 @@ function CmdCallback_FlyingCars(player, cmdText, arguments)
 	}
 }
 
+function CmdCallback_Pos(player, cmdText, arguments)
+{
+	local msg = "(" + player.Pos + "), " + player.Angle;
+	MessagePlayer(msg, player);
+	print(player.Name + "'s position: " + msg);
+}
+
 function CmdCallback_Spree(player, cmdText, arguments) {
 	local playerlist = "";
 	local count = 0;
-	for(local i = 0; i < 32; ++i) {
+	for(local i = 0, maxPlayers = GetMaxPlayers(); i < maxPlayers; ++i) {
 		local p = FindPlayer(i)
 		if(p)
 		{

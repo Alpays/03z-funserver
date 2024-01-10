@@ -51,25 +51,3 @@ function GetPlayerData(player)
 
 	return playerData;
 }
-
-// ----------------------------------------------------------------------------
-
-function InfoMessage(message, player)
-{
-	ClientMessage("** pm >> " + message, player, 0, 255, 0);
-}
-
-function ErrorMessage(message, player)
-{
-	ClientMessage("** pm >> " + message, player, 255, 0, 0);
-}
-
-function CmdSyntaxMessage(player, cmdText, ...)
-{
-	local paramList = "";
-	foreach (param in vargv)
-	{
-		paramList += paramList.len() ? ", <" + param + ">" : "<" + param + ">";
-	}
-	PrivMessage("Command syntax: /c " + cmdText.tolower() + " " + paramList, player);
-}

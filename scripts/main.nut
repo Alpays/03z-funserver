@@ -13,10 +13,13 @@ const CMD_FLAG_ONFOOT  = 0x04;
 // Not actually pools but meh.
 playerDataPool <- null;
 playerCmdPool  <- null;
+newsreelText   <- null;
+newsreelIndex  <- 0;
 
 function onScriptLoad()
 {
 	/* Include required files */
+	dofile("scripts/functions.nut", true);
 	dofile("scripts/player.nut", true);
 	dofile("scripts/playercmd.nut", true);
 	dofile("scripts/playercmdcallbacks.nut", true);
@@ -24,25 +27,38 @@ function onScriptLoad()
 	/* Initialize our containers */
 	playerDataPool = array(GetMaxPlayers());
 	playerCmdPool  = [];
+	newsreelText   =
+	[
+		"Type /c cmds to display a list of commands.",
+		"Don't want to spawn where you last died anymore? Type /c diepos to toggle this feature on or off.",
+		"Low on health? Type /c heal to heal yourself!",
+		"Get yourself some weapons with /c wep!",
+		"Remove whatever weapons you have in hand with /c disarm.",
+		"Tired of typing /c wep every time you spawn? /c spawnwep allows you to spawn with any weapons you choose!",
+		"Type /c goto to teleport to any player you desire."
+	];
 
 	/* Set up player commands */
-	AddPlayerCmd(["cmds", "cmd", "commands", "command"],  CmdCallback_Cmds);
+	AddPlayerCmd(["cmds", "commands"],                    CmdCallback_Cmds);
 	AddPlayerCmd(["credits", "server", "script", "info"], CmdCallback_Credits);
-	AddPlayerCmd(["diepos"],                              CmdCallback_Diepos);
+	AddPlayerCmd(["diepos"],                              CmdCallback_DiePos);
 	AddPlayerCmd(["heal"],                                CmdCallback_Heal,   (CMD_FLAG_SPAWNED | CMD_FLAG_ALIVE));
 	AddPlayerCmd(["disarm"],                              CmdCallback_Disarm, (CMD_FLAG_SPAWNED | CMD_FLAG_ALIVE));
 	AddPlayerCmd(["wep", "we"],                           CmdCallback_Wep,    (CMD_FLAG_SPAWNED | CMD_FLAG_ALIVE));
-	AddPlayerCmd(["spawnwep", "spawnweps", "spawnwe"],    CmdCallback_SpawnWep);
+	AddPlayerCmd(["spawnwep"],                            CmdCallback_SpawnWep);
 	AddPlayerCmd(["goto", "tp"],                          CmdCallback_GoTo,   (CMD_FLAG_SPAWNED | CMD_FLAG_ALIVE | CMD_FLAG_ONFOOT));
 	AddPlayerCmd(["weather", "w"],                        CmdCallback_Weather);
 	AddPlayerCmd(["time", "t"],                           CmdCallback_Time);
 	AddPlayerCmd(["timerate", "tr"],                      CmdCallback_TimeRate);
-	AddPlayerCmd(["speed", "s"],                          CmdCallback_Speed);
+	AddPlayerCmd(["gamespeed", "gs"],                     CmdCallback_Speed);
 	AddPlayerCmd(["gravity", "grav", "g"],                CmdCallback_Gravity);
 	AddPlayerCmd(["waterlevel", "wl"],                    CmdCallback_WaterLevel);
 	AddPlayerCmd(["driveonwater", "dow"],                 CmdCallback_DriveOnWater);
 	AddPlayerCmd(["flyingcars", "fc"],                    CmdCallback_FlyingCars);
-	AddPlayerCmd(["spree"],								  CmdCallback_Spree);
+	AddPlayerCmd(["pos"],                                 CmdCallback_Pos);
+	AddPlayerCmd(["spree"],                               CmdCallback_Spree, CMD_FLAG_SPAWNED);
+
+	NewTimer(TimerCallback_DisplayNewsreelMessage, 60000, 0);
 
 	print(SERVER_NAME + " has initialized.");
 }
@@ -107,13 +123,12 @@ function onPlayerDeath(player, reason)
 	playerData.spree = 0;
 }
 
-function onPlayerKilled(killer, player, reason, bodypart) {
+function onPlayerKill(killer, player, reason, bodypart) {
 	local killerData = GetPlayerData(killer);
 	local playerData = GetPlayerData(player);
 
 	killerData.spree += 1;
 
-	killer.Score += 1;
 	killer.Money += 500;
 	player.Money -= 250;
 
@@ -124,7 +139,7 @@ function onPlayerKilled(killer, player, reason, bodypart) {
 		local reward = killerData.spree * 100;
 		Message(killer.Name + " is on a killing spree of " + killerData.spree + "! ($" + reward + ")" )
 		killer.Money += reward;
-		Announce("~o~Killing spree!", killer, 5)
+		Announce("~o~Killing spree!", killer, 1)
 	}
 
 	if(playerData.spree >= 5) 
