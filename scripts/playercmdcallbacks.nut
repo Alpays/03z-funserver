@@ -35,6 +35,7 @@ function CmdCallback_Cmds(player, cmdText, arguments)
 function CmdCallback_Credits(player, cmdText, arguments)
 {
 	Message(">>> " + SERVER_NAME + " by [R3V]Kelvin and [VU]Alpays <<<");
+	Message(">>> Special credits: Hanney for server hosting <<<");
 	Message("Requested by " + player.Name + ".");
 }
 

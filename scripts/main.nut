@@ -55,8 +55,8 @@ function onScriptLoad()
 	AddPlayerCmd(["waterlevel", "wl"],                    CmdCallback_WaterLevel);
 	AddPlayerCmd(["driveonwater", "dow"],                 CmdCallback_DriveOnWater);
 	AddPlayerCmd(["flyingcars", "fc"],                    CmdCallback_FlyingCars);
-	AddPlayerCmd(["pos"],                                 CmdCallback_Pos);
-	AddPlayerCmd(["spree"],                               CmdCallback_Spree, CMD_FLAG_SPAWNED);
+	AddPlayerCmd(["pos"],                                 CmdCallback_Pos, CMD_FLAG_SPAWNED);
+	AddPlayerCmd(["spree"],                               CmdCallback_Spree);
 
 	NewTimer(TimerCallback_DisplayNewsreelMessage, 60000, 0);
 
@@ -129,8 +129,8 @@ function onPlayerKill(killer, player, reason, bodypart) {
 
 	killerData.spree += 1;
 
-	killer.Money += 500;
-	player.Money -= 250;
+	killer.Cash += 500;
+	player.Cash -= 250;
 
 	playerData.lastDeathPos = player.Pos;
 
@@ -138,7 +138,7 @@ function onPlayerKill(killer, player, reason, bodypart) {
 	{
 		local reward = killerData.spree * 100;
 		Message(killer.Name + " is on a killing spree of " + killerData.spree + "! ($" + reward + ")" )
-		killer.Money += reward;
+		killer.Cash += reward;
 		Announce("~o~Killing spree!", killer, 1)
 	}
 
