@@ -5,27 +5,19 @@
 
 function CmdCallback_Cmds(player, cmdText, arguments)
 {
-	PrivMessage("'/c'-prefixed commands:", player);
 	local cmdList = "";
+	//PrivMessage("'/c'-prefixed commands:", player);
 	foreach (i, cmd in playerCmdPool)
 	{
-		if (cmdList.len())
-		{
-			cmdList += ", ";
-		}
-
-		foreach (j, identifier in cmd.identifiers)
-		{
-			cmdList += j ? ("/" + identifier) : identifier;
-		}
-
-		// Output what we have every 5 commands so the server doesn't crash on long messages.
-		if (!((i + 1) % 5))
+		cmdList += cmdList.len() ? (", " + cmd.identifiers[0]) : cmd.identifiers[0];
+		// Output what we have every 10 commands so the server doesn't crash on long messages.
+		if (!((i + 1) % 10))
 		{
 			PrivMessage(cmdList, player);
 			cmdList = "";
 		}
 	}
+	// In case we have still something to output.
 	if (cmdList.len())
 	{
 		PrivMessage(cmdList, player);
@@ -34,9 +26,40 @@ function CmdCallback_Cmds(player, cmdText, arguments)
 
 function CmdCallback_Credits(player, cmdText, arguments)
 {
-	Message(">>> " + SERVER_NAME + " by [R3V]Kelvin and [VU]Alpays <<<");
-	Message(">>> Special credits: Hanney for server hosting <<<");
+	Message(SERVER_NAME + " by [R3V]Kelvin and [VU]Alpays");
+	Message("Special credits: Hanney (hosting)");
 	Message("Requested by " + player.Name + ".");
+}
+
+function CmdCallback_Pos(player, cmdText, arguments)
+{
+	local msg = "(" + player.Pos + "), " + player.Angle;
+	MessagePlayer(msg, player);
+	print(player.Name + "'s position: " + msg);
+}
+
+function CmdCallback_Spree(player, cmdText, arguments) {
+	local playerlist = "";
+	local count = 0;
+	for(local i = 0, maxPlayers = GetMaxPlayers(); i < maxPlayers; ++i) {
+		local p = FindPlayer(i)
+		if(p)
+		{
+			local playerData = GetPlayerData(p)
+			if(playerData.spree >= 5) {
+				playerlist += p.Name + " (" + playerData.spree + ") ";
+				++count;
+			}			
+		}
+	}
+	if(count == 0) {
+		ErrorMessage("No players are on spree!", player);
+	}
+
+	else {
+		Message("[SPREE] " + playerlist);
+		Message("Requested by " + player.Name + ".");
+	}
 }
 
 function CmdCallback_DiePos(player, cmdText, arguments)
@@ -90,10 +113,37 @@ function CmdCallback_Heal(player, cmdText, arguments)
 	Message(player.Name + " has healed.");
 }
 
+function CmdCallback_Fix(player, cmdText, arguments)
+{
+	local vehicle = player.Vehicle;
+	local vehicleHealth = vehicle.Health;
+	if (vehicleHealth >= 1000.0)
+	{
+		ErrorMessage("This vehicle does not need to be repaired.", player);
+		return;
+	}
+
+	if (vehicleHealth < 250.0)
+	{
+		ErrorMessage("You cannot repair a vehicle that is on fire.", player);
+		return;
+	}
+
+	vehicle.Fix();
+	Message(player.Name + " has repaired their vehicle.");
+}
+
 function CmdCallback_Disarm(player, cmdText, arguments)
 {
 	player.SetWeapon(WEP_FIST, 0);
 	PrivMessage("You have been disarmed.", player);
+}
+
+function CmdCallback_Eject(player, cmdText, arguments)
+{
+	local playerPos = player.Pos;
+	player.Pos = Vector(playerPos.x, playerPos.y, playerPos.z + 10.0);
+	Message(player.Name + " has ejected themselves from their vehicle.");
 }
 
 function CmdCallback_Wep(player, cmdText, arguments)
@@ -181,6 +231,156 @@ function CmdCallback_SpawnWep(player, cmdText, arguments)
 	}
 }
 
+function CmdCallback_HP(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		arguments = player.ID.tostring();
+	}
+
+	local targetPlayer = GetPlayer(arguments);
+	if (!targetPlayer)
+	{
+		ErrorMessage("No such player was found online.", player);
+		return;
+	}
+
+	local isSelf = (targetPlayer.ID == player.ID);
+	if (!targetPlayer.IsSpawned)
+	{
+		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
+		return;
+	}
+
+	Message(targetPlayer.Name + "'s health: " + targetPlayer.Health + "%. Requested by " +
+		(isSelf ? "themselves" : player.Name) + ".");
+}
+
+function CmdCallback_Arm(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		arguments = player.ID.tostring();
+	}
+
+	local targetPlayer = GetPlayer(arguments);
+	if (!targetPlayer)
+	{
+		ErrorMessage("No such player was found online.", player);
+		return;
+	}
+
+	local isSelf = (targetPlayer.ID == player.ID);
+	if (!targetPlayer.IsSpawned)
+	{
+		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
+		return;
+	}
+
+	Message(targetPlayer.Name + "'s armour: " + targetPlayer.Armour + "%. Requested by " +
+		(isSelf ? "themselves" : player.Name) + ".");
+}
+
+function CmdCallback_Loc(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		arguments = player.ID.tostring();
+	}
+
+	local targetPlayer = GetPlayer(arguments);
+	if (!targetPlayer)
+	{
+		ErrorMessage("No such player was found online.", player);
+		return;
+	}
+
+	local isSelf = (targetPlayer.ID == player.ID);
+	if (!targetPlayer.IsSpawned)
+	{
+		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
+		return;
+	}
+
+	local playerId         = player.ID;
+	local targetPlayerName = targetPlayer.Name;
+	local targetPlayerPos  = targetPlayer.Pos;
+	local districtName     = GetDistrictName(targetPlayerPos.x, targetPlayerPos.y);
+	local requestedBy      = isSelf ? "themselves" : player.Name;
+	for (local i = 0, maxPlayers = GetMaxPlayers(), plr, plrPos; i < maxPlayers; ++i)
+	{
+		plr = FindPlayer(i);
+		if (!plr)
+		{
+			continue;
+		}
+
+		if ((i == playerId) || !plr.IsSpawned)
+		{
+			MessagePlayer(targetPlayerName + "'s location: " + districtName +
+				". Requested by " + requestedBy + ".", plr);
+		}
+		else
+		{
+			plrPos = plr.Pos;
+			MessagePlayer(targetPlayerName + "'s location: " + districtName + " (" +
+				DistanceFromPoint(plrPos.x, plrPos.y, targetPlayerPos.x, targetPlayerPos.y) +
+				"m). Requested by " + requestedBy + ".", plr);
+		}
+	}
+}
+
+function CmdCallback_Ping(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		arguments = player.ID.tostring();
+	}
+
+	local targetPlayer = GetPlayer(arguments);
+	if (!targetPlayer)
+	{
+		ErrorMessage("No such player was found online.", player);
+		return;
+	}
+
+	Message(targetPlayer.Name + "'s ping: " + targetPlayer.Ping + ". Requested by " +
+		((targetPlayer.ID != player.ID) ? player.Name : "themselves") + ".");
+}
+
+function CmdCallback_Car(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		arguments = player.ID.tostring();
+	}
+
+	local targetPlayer = GetPlayer(arguments);
+	if (!targetPlayer)
+	{
+		ErrorMessage("No such player was found online.", player);
+		return;
+	}
+
+	local isSelf = (targetPlayer.ID == player.ID);
+	if (!targetPlayer.IsSpawned)
+	{
+		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
+		return;
+	}
+
+	local vehicle = targetPlayer.Vehicle;
+	if (!vehicle)
+	{
+		ErrorMessage(isSelf ? "You are not driving a vehicle." :
+			(targetPlayer.Name + " is not driving a vehicle."), player);
+		return;
+	}
+
+	Message(targetPlayer.Name + "'s vehicle: " + GetVehicleNameFromModel(vehicle.Model) +
+		". Requested by " + (isSelf ? "themselves" : player.Name) + ".");
+}
+
 function CmdCallback_GoTo(player, cmdText, arguments)
 {
 	if (!arguments)
@@ -189,7 +389,7 @@ function CmdCallback_GoTo(player, cmdText, arguments)
 		return;
 	}
 
-	local targetPlayer = FindPlayer(IsNum(arguments) ? arguments.tointeger() : arguments);
+	local targetPlayer = GetPlayer(arguments);
 	if (!targetPlayer)
 	{
 		ErrorMessage("No such player was found online.", player);
@@ -210,6 +410,37 @@ function CmdCallback_GoTo(player, cmdText, arguments)
 
 	player.Pos = targetPlayer.Pos;
 	Message(player.Name + " has teleported to " + targetPlayer.Name + ".");
+}
+
+function CmdCallback_Ann(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		CmdSyntaxMessage(player, cmdText, "message");
+		return;
+	}
+
+	local message = "";
+	local niceTry = false;
+	foreach (char in arguments)
+	{
+		// Unfortunately, I am too lazy to determine whether our player tried to send a colored
+		// message or actually wanted to fuck up the whole server with a crashy announcement.
+		if (char == '~')
+		{
+			niceTry = true;
+			continue;
+		}
+
+		message += char.tochar();
+	}
+
+	if (niceTry)
+	{
+		ErrorMessage("Don't even think about it, you fucking idiot.", player);
+	}
+	AnnounceAll(message, 0);
+	Message(player.Name + " announced: " + message);
 }
 
 function CmdCallback_Weather(player, cmdText, arguments)
@@ -287,12 +518,12 @@ function CmdCallback_Time(player, cmdText, arguments)
 
 	if ((newHour == GetHour()) && (newMinute == GetMinute()))
 	{
-		ErrorMessage("Time is already set to " + newHour + ":" + newMinute + ".", player);
+		ErrorMessage(format("Time is already set to %02d:%02d.", newHour, newMinute), player);
 		return;
 	}
 
 	SetTime(newHour, newMinute);
-	Message(player.Name + " has changed the time to " + newHour + ":" + newMinute + ".");
+	Message(format("%s has changed time to %02d:%02d.", player.Name, newHour, newMinute));
 }
 
 function CmdCallback_TimeRate(player, cmdText, arguments)
@@ -308,7 +539,7 @@ function CmdCallback_TimeRate(player, cmdText, arguments)
 		ErrorMessage("Time rate must be a number.", player);
 		return;
 	}
-	
+
 	local newTimeRate = arguments.tointeger();
 	if (newTimeRate == GetTimeRate())
 	{
@@ -448,6 +679,44 @@ function CmdCallback_DriveOnWater(player, cmdText, arguments)
 	}
 }
 
+function CmdCallback_FastSwitch(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		CmdSyntaxMessage(player, cmdText, "on/off");
+		return;
+	}
+
+	switch (arguments.tolower())
+	{
+	case "on":
+		if (GetFastSwitch())
+		{
+			ErrorMessage("FastSwitch is already enabled.", player);
+			return;
+		}
+
+		SetFastSwitch(true);
+		Message(player.Name + " has enabled FastSwitch.");
+		return;
+
+	case "off":
+		if (!GetFastSwitch())
+		{
+			ErrorMessage("FastSwitch is already disabled.", player);
+			return;
+		}
+
+		SetFastSwitch(false);
+		Message(player.Name + " has disabled FastSwitch.");
+		return;
+
+	default:
+		ErrorMessage("Invalid option.", player);
+		return;
+	}
+}
+
 function CmdCallback_FlyingCars(player, cmdText, arguments)
 {
 	if (!arguments)
@@ -483,36 +752,5 @@ function CmdCallback_FlyingCars(player, cmdText, arguments)
 	default:
 		ErrorMessage("Invalid option.", player);
 		return;
-	}
-}
-
-function CmdCallback_Pos(player, cmdText, arguments)
-{
-	local msg = "(" + player.Pos + "), " + player.Angle;
-	MessagePlayer(msg, player);
-	print(player.Name + "'s position: " + msg);
-}
-
-function CmdCallback_Spree(player, cmdText, arguments) {
-	local playerlist = "";
-	local count = 0;
-	for(local i = 0, maxPlayers = GetMaxPlayers(); i < maxPlayers; ++i) {
-		local p = FindPlayer(i)
-		if(p)
-		{
-			local playerData = GetPlayerData(p)
-			if(playerData.spree >= 5) {
-				playerlist += p.Name + " (" + playerData.spree + ") ";
-				++count;
-			}			
-		}
-	}
-	if(count == 0) {
-		ErrorMessage("No players are on spree!", player);
-	}
-
-	else {
-		Message("[SPREE] " + playerlist);
-		Message("Requested by " + player.Name + ".");
 	}
 }
