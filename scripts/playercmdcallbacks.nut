@@ -148,6 +148,9 @@ function CmdCallback_Eject(player, cmdText, arguments)
 
 function CmdCallback_Wep(player, cmdText, arguments)
 {
+	if(quakeMode) {
+		return;
+	}
 	if (!arguments)
 	{
 		CmdSyntaxMessage(player, cmdText, "weapon list");
@@ -176,6 +179,9 @@ function CmdCallback_Wep(player, cmdText, arguments)
 
 function CmdCallback_SpawnWep(player, cmdText, arguments)
 {
+	if(quakeMode) {
+		return;
+	}
 	if (!arguments)
 	{
 		CmdSyntaxMessage(player, cmdText, "weapon list/off");
@@ -753,4 +759,15 @@ function CmdCallback_FlyingCars(player, cmdText, arguments)
 		ErrorMessage("Invalid option.", player);
 		return;
 	}
+}
+
+function CmdCallback_QuakeMode(player, cmdText, arguments) {
+	toggleQuakeMode();
+
+	if(quakeMode) {
+		Message(player.Name + " activated Quake Mode.");
+	}
+	else {
+		Message(player.Name + " stopped Quake Mode.");
+	} 
 }

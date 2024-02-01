@@ -24,6 +24,7 @@ function onScriptLoad()
 	dofile("scripts/player.nut", true);
 	dofile("scripts/playercmd.nut", true);
 	dofile("scripts/playercmdcallbacks.nut", true);
+	dofile("scripts/quake_mode.nut", true);
 
 	/* Initialize our containers */
 	playerDataPool = array(GetMaxPlayers());
@@ -69,6 +70,8 @@ function onScriptLoad()
 	AddPlayerCmd(["driveonwater", "dow"],                 CmdCallback_DriveOnWater);
 	AddPlayerCmd(["fastswitch", "fs"],                    CmdCallback_FastSwitch);
 	AddPlayerCmd(["flyingcars", "fc"],                    CmdCallback_FlyingCars);
+	AddPlayerCmd(["quake", "quakemode", "qm"],			  CmdCallback_QuakeMode);
+
 
 	NewTimer(TimerCallback_DisplayNewsreelMessage, 60000, 0);
 
@@ -114,7 +117,7 @@ function onPlayerSpawn(player)
 	}
 
 	// Spawn weapons
-	if (playerData.spawnWeapons.len())
+	if (playerData.spawnWeapons.len() && !disableSpawnWeps)
 	{
 		// Disarm player.
 		player.SetWeapon(WEP_FIST, 0);
@@ -123,6 +126,8 @@ function onPlayerSpawn(player)
 			player.SetWeapon(weaponId, 9999);
 		}
 	}
+
+	quake.onPlayerSpawn(player);
 }
 
 function onPlayerDeath(player, reason)
