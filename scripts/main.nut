@@ -71,7 +71,7 @@ function onScriptLoad()
 	AddPlayerCmd(["fastswitch", "fs"],                    CmdCallback_FastSwitch);
 	AddPlayerCmd(["flyingcars", "fc"],                    CmdCallback_FlyingCars);
 	AddPlayerCmd(["quake", "quakemode", "qm"],			  CmdCallback_QuakeMode);
-
+	AddPlayerCmd(["shootinair", "sia"],                   CmdCallback_ShootInAir);
 
 	NewTimer(TimerCallback_DisplayNewsreelMessage, 60000, 0);
 
@@ -95,6 +95,7 @@ function onPlayerJoin(player)
 		return;
 	}
 
+	player.ShootInAir = shootInAir;
 	InfoMessage("Welcome to " + SERVER_NAME + ", " + player.Name + "!", player);
 	InfoMessage("View a list of commands with /c cmds.", player);
 }
@@ -123,7 +124,7 @@ function onPlayerSpawn(player)
 		player.SetWeapon(WEP_FIST, 0);
 		foreach (weaponId in playerData.spawnWeapons)
 		{
-			player.SetWeapon(weaponId, 9999);
+			player.SetWeapon(weaponId, 1000);
 		}
 	}
 
@@ -145,7 +146,11 @@ function onPlayerKill(killer, player, reason, bodypart) {
 	local playerData = GetPlayerData(player);
 
 	killer.Cash += 500;
-	player.Cash -= 250;
+	if (player.Cash > 250) {
+		player.Cash -= 250;
+	} else {
+		player.Cash = 0;
+	}
 
 	playerData.lastDeathPos = player.Pos;
 

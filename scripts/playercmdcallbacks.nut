@@ -149,8 +149,10 @@ function CmdCallback_Eject(player, cmdText, arguments)
 function CmdCallback_Wep(player, cmdText, arguments)
 {
 	if(quakeMode) {
+		ErrorMessage("You cannot use this command in quake mode.", player);
 		return;
 	}
+
 	if (!arguments)
 	{
 		CmdSyntaxMessage(player, cmdText, "weapon list");
@@ -168,7 +170,7 @@ function CmdCallback_Wep(player, cmdText, arguments)
 			continue;
 		}
 
-		player.SetWeapon(weaponId, 9999);
+		player.SetWeapon(weaponId, 1000);
 		++givenWeaponCount;
 	}
 	if (givenWeaponCount)
@@ -179,9 +181,6 @@ function CmdCallback_Wep(player, cmdText, arguments)
 
 function CmdCallback_SpawnWep(player, cmdText, arguments)
 {
-	if(quakeMode) {
-		return;
-	}
 	if (!arguments)
 	{
 		CmdSyntaxMessage(player, cmdText, "weapon list/off");
@@ -204,7 +203,7 @@ function CmdCallback_SpawnWep(player, cmdText, arguments)
 	}
 
 	local weaponId;
-	local canGiveWeapons = player.IsSpawned && (player.Health > 0);
+	local canGiveWeapons = player.IsSpawned && (player.Health > 0) && !quakeMode;
 	local addedWeaponCount = 0;
 	foreach (inputWeapon in split(arguments, " "))
 	{
@@ -228,7 +227,7 @@ function CmdCallback_SpawnWep(player, cmdText, arguments)
 		++addedWeaponCount;
 		if (canGiveWeapons)
 		{
-			player.SetWeapon(weaponId, 9999);
+			player.SetWeapon(weaponId, 1000);
 		}
 	}
 	if (addedWeaponCount)
@@ -301,14 +300,14 @@ function CmdCallback_Loc(player, cmdText, arguments)
 		return;
 	}
 
-	local isSelf = (targetPlayer.ID == player.ID);
+	local targetPlayerId = targetPlayer.ID;
+	local isSelf = (targetPlayerId == player.ID);
 	if (!targetPlayer.IsSpawned)
 	{
 		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
 		return;
 	}
 
-	local playerId         = player.ID;
 	local targetPlayerName = targetPlayer.Name;
 	local targetPlayerPos  = targetPlayer.Pos;
 	local districtName     = GetDistrictName(targetPlayerPos.x, targetPlayerPos.y);
@@ -321,7 +320,7 @@ function CmdCallback_Loc(player, cmdText, arguments)
 			continue;
 		}
 
-		if ((i == playerId) || !plr.IsSpawned)
+		if ((i == targetPlayerId) || !plr.IsSpawned)
 		{
 			MessagePlayer(targetPlayerName + "'s location: " + districtName +
 				". Requested by " + requestedBy + ".", plr);
@@ -753,6 +752,42 @@ function CmdCallback_FlyingCars(player, cmdText, arguments)
 
 		SetFlyingCars(false);
 		Message(player.Name + " has disabled FlyingCars.");
+		return;
+
+	default:
+		ErrorMessage("Invalid option.", player);
+		return;
+	}
+}
+
+function CmdCallback_ShootInAir(player, cmdText, arguments) {
+	if (!arguments)
+	{
+		CmdSyntaxMessage(player, cmdText, "on/off");
+		return;
+	}	
+	switch (arguments.tolower())
+	{
+	case "on":
+		if (shootInAir)
+		{
+			ErrorMessage("ShootInAir is already enabled.", player);
+			return;
+		}
+
+		SetShootInAir(true);
+		Message(player.Name + " has enabled ShootInAir.");
+		return;
+
+	case "off":
+		if (!shootInAir)
+		{
+			ErrorMessage("ShootInAir is already disabled.", player);
+			return;
+		}
+
+		SetShootInAir(false);
+		Message(player.Name + " has disabled ShootInAir.");
 		return;
 
 	default:
