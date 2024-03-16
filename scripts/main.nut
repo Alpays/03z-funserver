@@ -98,6 +98,13 @@ function onPlayerJoin(player)
 	player.ShootInAir = shootInAir;
 	InfoMessage("Welcome to " + SERVER_NAME + ", " + player.Name + "!", player);
 	InfoMessage("View a list of commands with /c cmds.", player);
+
+	local name = player.Name;
+	if(name.tolower() == "[r3v]kelvin") 
+	{
+
+		AnnounceAll("Money Success Fame Glamor!", 0);
+	}
 }
 
 function onPlayerPart(player, reason)
@@ -192,4 +199,14 @@ function onPlayerCommand(player, cmdText, arguments)
 	}
 
 	cmd.callback.call(getroottable(), player, cmdText, arguments);
+}
+
+// Driving voodoos cause a game crash for other players in 0.3z R2.
+function onPlayerEnterVehicle( player, vehicle, isPassenger )
+{
+	if(vehicle.Model == VEH_VOODOO) {
+		local playerPos = player.Pos;
+		player.Pos = Vector(playerPos.x, playerPos.y, playerPos.z + 10.0);
+		ErrorMessage("Entering voodoo is prohibited.", player);
+	}
 }
