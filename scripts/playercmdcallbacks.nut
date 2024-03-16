@@ -29,7 +29,6 @@ function CmdCallback_Credits(player, cmdText, arguments)
 	Message(SERVER_NAME + " by [R3V]Kelvin and [VU]Alpays");
 	Message("Special credits: Hanney (hosting)");
 	Message("Requested by " + player.Name + ".");
-	Message("Player's angle " + player.Angle + " Vehicle angle: " + player.Vehicle.Angle);
 }
 
 function CmdCallback_Pos(player, cmdText, arguments)
