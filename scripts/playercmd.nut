@@ -1,41 +1,52 @@
+/*
+ * Just4Fun Vice City: Multiplayer (VC:MP) 0.3z R2 server
+ * Authors: sfwidde ([R3V]Kelvin) and [VU]Alpays
+ * 2024-01-08
+ */
+
 class PlayerCmd
 {
 	identifiers     = null;
-	callback        = null;
+	handler         = null;
 	permissionFlags = null;
 }
 
-function PlayerCmd::constructor(identifiers, callback, permissionFlags)
+function PlayerCmd::constructor(identifiers, handler, permissionFlags)
 {
 	this.identifiers     = identifiers;
-	this.callback        = callback;
+	this.handler         = handler;
 	this.permissionFlags = permissionFlags;
 }
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
-function AddPlayerCmd(identifiers, callback, permissionFlags = CMD_FLAG_NONE)
+function AddPlayerCommand(handler, permissionFlags, ...)
 {
-	foreach (identifier in identifiers)
+	if (!vargv.len())
 	{
-		if (FindPlayerCmd(identifier))
+		throw "player command must have at least one identifier";
+	}
+
+	foreach (identifier in vargv)
+	{
+		if (FindPlayerCommand(identifier))
 		{
-			throw "player command '" + identifier + "' already exists";
+			throw "player command \"" + identifier + "\" already exists";
 		}
 	}
 
 	foreach (cmd in playerCmdPool)
 	{
-		if (callback == cmd.callback)
+		if (handler == cmd.handler)
 		{
-			throw "callback " + callback + " is already associated with a player command";
+			throw "player command handler " + handler + " is already associated with an existing command";
 		}
 	}
 
-	playerCmdPool.append(PlayerCmd(identifiers, callback, permissionFlags));
+	playerCmdPool.append(PlayerCmd(vargv, handler, permissionFlags));
 }
 
-function FindPlayerCmd(identifier)
+function FindPlayerCommand(identifier)
 {
 	identifier = identifier.tolower();
 	foreach (cmd in playerCmdPool)

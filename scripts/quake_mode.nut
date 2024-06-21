@@ -1,7 +1,6 @@
 class quakeHook {
     function onPlayerSpawn(player) {
         if(quakeMode) {
-            //player.ShootInAir = ::shootInAir;
             player.SetWeapon(::WEP_FIST, 0);
             player.SetWeapon(30, 15000);
         }
@@ -12,20 +11,9 @@ quake <- quakeHook();
 
 quakeMode <- false;
 disableSpawnWeps <- false;
-shootInAir <- false;
-
-function SetShootInAir(toggle) {
-    shootInAir = toggle;
-    for(local i = 0; i < GetMaxPlayers(); ++i) {
-        local p = FindPlayer(i);
-        if(p) {
-            p.ShootInAir = shootInAir;
-        }
-    }
-}
 
 function SetWeapons() {
-    for(local i = 0; i < GetMaxPlayers(); ++i) {
+    for(local i = 0; i < MAX_PLAYERS; ++i) {
         local p = FindPlayer(i);
         if(p && p.IsSpawned && p.Health > 0) {
             p.SetWeapon(WEP_FIST, 0);
