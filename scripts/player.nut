@@ -10,11 +10,7 @@ class PlayerData
 	lastDeathPos  = null;
 	spawnWeapons  = null;
 	spree         = 0;
-}
-
-function PlayerData::constructor()
-{
-	spawnWeapons = [];
+	processTimer  = null;
 }
 
 // -----------------------------------------------------------------------------
@@ -55,34 +51,39 @@ function GetPlayerData(player)
 
 // -----------------------------------------------------------------------------
 
-function IncreasePlayerKillingSpree(player)
+function Player::IsAlive()
 {
-	local playerData = GetPlayerData(player);
+	return IsSpawned && (Health > 0);
+}
+
+function Player::IncreaseKillingSpree()
+{
+	local playerData = ::GetPlayerData(this);
 	local hpAddon;
 	if ((++playerData.spree) % 5 == 0)
 	{
 		local reward = playerData.spree * 100;
-		player.Cash += reward;
+		Cash += reward;
 		hpAddon = 40;
-		Message(player.Name + " is on a killing spree of " + playerData.spree + "! ($" + reward + ")");
-		Announce("~o~killing spree!", player, 1);
+		::Message(Name + " is on a killing spree of " + playerData.spree + "! ($" + reward + ")");
+		::Announce("~o~killing spree!", this, 1);
 	}
 	else { hpAddon = 25; }
 
-	local playerHealth = player.Health;
-	if (player.IsSpawned && (playerHealth > 0))
+	if (IsAlive())
 	{
+		local playerHealth = Health;
 		local newPlayerHealth = (playerHealth + hpAddon);
-		player.Health = (newPlayerHealth < 100) ? newPlayerHealth : 100;
+		Health = (newPlayerHealth < 100) ? newPlayerHealth : 100;
 	}
 }
 
-function EndPlayerKillingSpree(player, killer = null)
+function Player::EndKillingSpree(killer = null)
 {
-	local playerData = GetPlayerData(player);
+	local playerData = ::GetPlayerData(this);
 	if (playerData.spree >= 5)
 	{
-		Message(player.Name + "'s killing spree of " + playerData.spree + " has been ended by " +
+		::Message(Name + "'s killing spree of " + playerData.spree + " has been ended by " +
 			(killer ? killer.Name : "themselves") + "!");
 	}
 	playerData.spree = 0;

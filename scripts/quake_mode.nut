@@ -15,11 +15,11 @@ disableSpawnWeps <- false;
 function SetWeapons() {
     for(local i = 0; i < MAX_PLAYERS; ++i) {
         local p = FindPlayer(i);
-        if(p && p.IsSpawned && p.Health > 0) {
+        if(p && p.IsAlive()) {
             p.SetWeapon(WEP_FIST, 0);
             p.SetWeapon(30, 15000);
         }
-    }    
+    }
 }
 
 function toggleQuakeMode() {

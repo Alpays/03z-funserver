@@ -21,14 +21,8 @@ function GetPlayer(text)
 
 function InfoMessage(message, player = null)
 {
-	if (player)
-	{
-		ClientMessage("** pm >> " + message, player, 255, 150, 225);
-	}
-	else
-	{
-		ClientMessageToAll(message, 255, 150, 225);
-	}
+	if (player) { ClientMessage("** pm >> " + message, player, 255, 150, 225); }
+	else { ClientMessageToAll(message, 255, 150, 225); }
 }
 
 function ErrorMessage(message, player)

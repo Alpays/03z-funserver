@@ -16,11 +16,12 @@ const PLAYERCMD_FLAG_ONFOOT    = 0x04; // 0100
 const PLAYERCMD_FLAG_INVEHICLE = 0x08; // 1000
 
 /* Containers */
-playerDataPool <- null;
-playerCmdPool  <- null;
-newsreelTexts  <- null;
-newsreelIndex  <- 0;
-shootInAir     <- false;
+playerDataPool     <- null;
+playerCmdPool      <- null;
+playerSpawnWeapons <- null;
+newsreelTexts      <- null;
+newsreelIndex      <- 0;
+shootInAir         <- false;
 
 // Implicitly prepends "scripts/" directory.
 function LoadMultipleScriptFiles(...)
@@ -73,10 +74,19 @@ function onPlayerJoin(player)
 	player.ShootInAir = shootInAir;
 
 	local playerName = player.Name;
+	local lowerPlayerName = playerName.tolower();
+	if (playerSpawnWeapons.rawin(lowerPlayerName))
+	{
+		playerData.spawnWeapons = playerSpawnWeapons.rawget(lowerPlayerName);
+	}
+	else
+	{
+		playerSpawnWeapons.rawset(lowerPlayerName, playerData.spawnWeapons = []);
+	}
 
 	InfoMessage("Welcome to " + SERVER_NAME + ", " + playerName + "!", player);
 	InfoMessage("Type /c cmds to view a list of commands.", player);
-	if (playerName.tolower() == "[r3v]kelvin") 
+	if (playerName.tolower() == "[r3v]kelvin")
 	{
 		AnnounceAll("Money Success Fame Glamour", 0);
 	}
@@ -84,7 +94,10 @@ function onPlayerJoin(player)
 
 function onPlayerPart(player, reason)
 {
-	EndPlayerKillingSpree(player);
+	local playerData = GetPlayerData(player);
+
+	player.EndKillingSpree();
+	if (playerData.processTimer) { playerData.processTimer.Delete(); }
 
 	DeletePlayerData(player);
 }
@@ -121,7 +134,7 @@ function onPlayerDeath(player, reason)
 	// Update player's last death position.
 	playerData.lastDeathPos = (reason != WEP_DROWNED) ? player.Pos : null;
 
-	EndPlayerKillingSpree(player);
+	player.EndKillingSpree();
 }
 
 function onPlayerKill(killer, player, reason, bodypart)
@@ -137,8 +150,8 @@ function onPlayerKill(killer, player, reason, bodypart)
 	killer.Cash += 500;
 	player.Cash = (playerCash > 250) ? (playerCash - 250) : 0;
 
-	IncreasePlayerKillingSpree(killer);
-	EndPlayerKillingSpree(player, killer);
+	killer.IncreaseKillingSpree();
+	player.EndKillingSpree(killer);
 }
 
 function onPlayerCommand(player, cmdText, arguments)
@@ -156,7 +169,7 @@ function onPlayerCommand(player, cmdText, arguments)
 		return;
 	}
 
-	if ((cmd.permissionFlags & PLAYERCMD_FLAG_ALIVE) && (player.Health <= 0))
+	if ((cmd.permissionFlags & PLAYERCMD_FLAG_ALIVE) && !player.IsAlive())
 	{
 		ErrorMessage("You cannot use this command while dying.", player);
 		return;

@@ -18,7 +18,7 @@ function PlayerCmdHandler_Cmds(player, cmdText, arguments)
 			cmdList = "";
 		}
 	}
-	// In case we have still something to output.
+	// In case we still have something to output.
 	if (cmdList.len())
 	{
 		PrivMessage(cmdList, player);
@@ -50,7 +50,7 @@ function PlayerCmdHandler_Spree(player, cmdText, arguments) {
 			if(playerData.spree >= 5) {
 				playerlist += p.Name + " (" + playerData.spree + ") ";
 				++count;
-			}			
+			}
 		}
 	}
 	if(count == 0) {
@@ -110,8 +110,15 @@ function PlayerCmdHandler_Heal(player, cmdText, arguments)
 		return;
 	}
 
-	player.Health = 100;
-	Message(player.Name + " has healed.");
+	local playerData = GetPlayerData(player);
+	// Suppress any process our player is waiting for to finish...
+	if (playerData.processTimer) { playerData.processTimer.Delete(); }
+
+	local playerPos = player.Pos;
+	playerData.processTimer = NewTimer(TimerCallback_HealPlayer, 3000, 1,
+		player.ID, playerPos.x.tointeger(), playerPos.y.tointeger(), playerPos.z.tointeger());
+	PrivMessage("Stand still for 3 seconds for healing process to be successful. If you move, " +
+		"you won't be healed.", player);
 }
 
 function PlayerCmdHandler_Fix(player, cmdText, arguments)
@@ -130,8 +137,15 @@ function PlayerCmdHandler_Fix(player, cmdText, arguments)
 		return;
 	}
 
-	vehicle.Fix();
-	Message(player.Name + " has repaired their vehicle.");
+	local playerData = GetPlayerData(player);
+	// Suppress any process our player is waiting for to finish...
+	if (playerData.processTimer) { playerData.processTimer.Delete(); }
+
+	local vehiclePos = vehicle.Pos;
+	playerData.processTimer = NewTimer(TimerCallback_FixPlayerVehicle, 5000, 1,
+		player.ID, vehicle.ID, vehiclePos.x.tointeger(), vehiclePos.y.tointeger(), vehiclePos.z.tointeger());
+	PrivMessage("Vehicle must stand still for 5 seconds for repair process to be successful. " +
+		"If it moves, it won't be repaired.", player);
 }
 
 function PlayerCmdHandler_Disarm(player, cmdText, arguments)
@@ -164,7 +178,9 @@ function PlayerCmdHandler_Wep(player, cmdText, arguments)
 	local givenWeaponCount = 0;
 	foreach (inputWeapon in split(arguments, " "))
 	{
+		// Convert input weapon to int.
 		weaponId = IsNum(inputWeapon) ? inputWeapon.tointeger() : GetWeaponID(inputWeapon);
+		// Make sure we are processing a valid weapon...
 		if ((weaponId < WEP_BRASSKNUCKLES) || (weaponId == 13) || (weaponId > WEP_MINIGUN))
 		{
 			ErrorMessage("\"" + inputWeapon + "\" is an invalid weapon.", player);
@@ -204,20 +220,25 @@ function PlayerCmdHandler_SpawnWep(player, cmdText, arguments)
 	}
 
 	local weaponId;
-	local canGiveWeapons = player.IsSpawned && (player.Health > 0) && !quakeMode;
+	local canGiveWeapons = (player.IsAlive() && !quakeMode);
 	local addedWeaponCount = 0;
 	foreach (inputWeapon in split(arguments, " "))
 	{
+		// Convert input weapon to int.
 		weaponId = IsNum(inputWeapon) ? inputWeapon.tointeger() : GetWeaponID(inputWeapon);
+		// Make sure we are processing a valid weapon...
 		if ((weaponId < WEP_BRASSKNUCKLES) || (weaponId == 13) || (weaponId > WEP_MINIGUN))
 		{
 			ErrorMessage("\"" + inputWeapon + "\" is an invalid weapon.", player);
 			continue;
 		}
 
+		// We are processing a valid weapon now, so clear previous
+		// spawn weapons if we haven't yet.
 		if (!addedWeaponCount)
 		{
 			playerData.spawnWeapons.clear();
+			// Disarm player.
 			if (canGiveWeapons)
 			{
 				player.SetWeapon(WEP_FIST, 0);
@@ -226,6 +247,7 @@ function PlayerCmdHandler_SpawnWep(player, cmdText, arguments)
 
 		playerData.spawnWeapons.append(weaponId);
 		++addedWeaponCount;
+		// Give just added weapon to player's hand, if allowed to.
 		if (canGiveWeapons)
 		{
 			player.SetWeapon(weaponId, 1000);
@@ -239,9 +261,10 @@ function PlayerCmdHandler_SpawnWep(player, cmdText, arguments)
 
 function PlayerCmdHandler_HP(player, cmdText, arguments)
 {
+	local playerId = player.ID;
 	if (!arguments)
 	{
-		arguments = player.ID.tostring();
+		arguments = playerId.tostring();
 	}
 
 	local targetPlayer = GetPlayer(arguments);
@@ -251,7 +274,7 @@ function PlayerCmdHandler_HP(player, cmdText, arguments)
 		return;
 	}
 
-	local isSelf = (targetPlayer.ID == player.ID);
+	local isSelf = (targetPlayer.ID == playerId);
 	if (!targetPlayer.IsSpawned)
 	{
 		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
@@ -271,9 +294,10 @@ function PlayerCmdHandler_HP(player, cmdText, arguments)
 
 function PlayerCmdHandler_Arm(player, cmdText, arguments)
 {
+	local playerId = player.ID;
 	if (!arguments)
 	{
-		arguments = player.ID.tostring();
+		arguments = playerId.tostring();
 	}
 
 	local targetPlayer = GetPlayer(arguments);
@@ -283,7 +307,7 @@ function PlayerCmdHandler_Arm(player, cmdText, arguments)
 		return;
 	}
 
-	local isSelf = (targetPlayer.ID == player.ID);
+	local isSelf = (targetPlayer.ID == playerId);
 	if (!targetPlayer.IsSpawned)
 	{
 		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
@@ -303,9 +327,10 @@ function PlayerCmdHandler_Arm(player, cmdText, arguments)
 
 function PlayerCmdHandler_Loc(player, cmdText, arguments)
 {
+	local playerId = player.ID;
 	if (!arguments)
 	{
-		arguments = player.ID.tostring();
+		arguments = playerId.tostring();
 	}
 
 	local targetPlayer = GetPlayer(arguments);
@@ -316,7 +341,7 @@ function PlayerCmdHandler_Loc(player, cmdText, arguments)
 	}
 
 	local targetPlayerId = targetPlayer.ID;
-	local isSelf = (targetPlayerId == player.ID);
+	local isSelf = (targetPlayerId == playerId);
 	if (!targetPlayer.IsSpawned)
 	{
 		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
@@ -327,14 +352,16 @@ function PlayerCmdHandler_Loc(player, cmdText, arguments)
 	local targetPlayerPos  = targetPlayer.Pos;
 	local districtName     = GetDistrictName(targetPlayerPos.x, targetPlayerPos.y);
 	local requestedBy      = isSelf ? "themselves" : player.Name;
+	// Message for everyone, but with relative distances.
 	for (local i = 0, plr, plrPos; i < MAX_PLAYERS; ++i)
 	{
 		plr = FindPlayer(i);
-		if (!plr)
-		{
-			continue;
-		}
+		if (!plr) { continue; }
 
+		// Exclude distance if
+		// - target player is the one receiving message, because for them distance will always be zero, or
+		// - current player to send message to is unspawned, because it doesn't make any sense
+		// to measure distance for unspawned players.
 		if ((i == targetPlayerId) || !plr.IsSpawned)
 		{
 			MessagePlayer(targetPlayerName + "'s location: " + districtName +
@@ -352,9 +379,10 @@ function PlayerCmdHandler_Loc(player, cmdText, arguments)
 
 function PlayerCmdHandler_Ping(player, cmdText, arguments)
 {
+	local playerId = player.ID;
 	if (!arguments)
 	{
-		arguments = player.ID.tostring();
+		arguments = playerId.tostring();
 	}
 
 	local targetPlayer = GetPlayer(arguments);
@@ -365,14 +393,15 @@ function PlayerCmdHandler_Ping(player, cmdText, arguments)
 	}
 
 	Message(targetPlayer.Name + "'s ping: " + targetPlayer.Ping + ". Requested by " +
-		((targetPlayer.ID != player.ID) ? player.Name : "themselves") + ".");
+		((targetPlayer.ID != playerId) ? player.Name : "themselves") + ".");
 }
 
 function PlayerCmdHandler_Car(player, cmdText, arguments)
 {
+	local playerId = player.ID;
 	if (!arguments)
 	{
-		arguments = player.ID.tostring();
+		arguments = playerId.tostring();
 	}
 
 	local targetPlayer = GetPlayer(arguments);
@@ -382,7 +411,7 @@ function PlayerCmdHandler_Car(player, cmdText, arguments)
 		return;
 	}
 
-	local isSelf = (targetPlayer.ID == player.ID);
+	local isSelf = (targetPlayer.ID == playerId);
 	if (!targetPlayer.IsSpawned)
 	{
 		ErrorMessage(isSelf ? "You are not spawned." : (targetPlayer.Name + " is not spawned."), player);
@@ -416,7 +445,8 @@ function PlayerCmdHandler_GoTo(player, cmdText, arguments)
 		return;
 	}
 
-	if (targetPlayer.ID == player.ID)
+	local playerId = player.ID;
+	if (targetPlayer.ID == playerId)
 	{
 		ErrorMessage("You cannot teleport to yourself.", player);
 		return;
@@ -428,8 +458,16 @@ function PlayerCmdHandler_GoTo(player, cmdText, arguments)
 		return;
 	}
 
-	player.Pos = targetPlayer.Pos;
-	Message(player.Name + " has teleported to " + targetPlayer.Name + ".");
+	local playerData = GetPlayerData(player);
+	// Suppress any process our player is waiting for to finish...
+	if (playerData.processTimer) { playerData.processTimer.Delete(); }
+
+	local playerPos = player.Pos;
+	local targetPlayerName = targetPlayer.Name; // Using name rather than ID is 'safer' in this case.
+	playerData.processTimer = NewTimer(TimerCallback_TeleportPlayerToPlayer, 3000, 1,
+		playerId, targetPlayerName, playerPos.x.tointeger(), playerPos.y.tointeger(), playerPos.z.tointeger());
+	PrivMessage("Stand still for 3 seconds to teleport to " + targetPlayerName + ". If you move, " +
+		"you won't be teleported.", player);
 }
 
 function PlayerCmdHandler_Ann(player, cmdText, arguments)
@@ -661,44 +699,6 @@ function PlayerCmdHandler_WaterLevel(player, cmdText, arguments)
 	Message(player.Name + " has changed water level to " + newWaterLevel + ".");
 }
 
-function PlayerCmdHandler_DriveOnWater(player, cmdText, arguments)
-{
-	if (!arguments)
-	{
-		CmdSyntaxMessage(player, cmdText, "on/off");
-		return;
-	}
-
-	switch (arguments.tolower())
-	{
-	case "on":
-		if (GetDriveOnWater())
-		{
-			ErrorMessage("DriveOnWater is already enabled.", player);
-			return;
-		}
-
-		SetDriveOnWater(true);
-		Message(player.Name + " has enabled DriveOnWater.");
-		return;
-
-	case "off":
-		if (!GetDriveOnWater())
-		{
-			ErrorMessage("DriveOnWater is already disabled.", player);
-			return;
-		}
-
-		SetDriveOnWater(false);
-		Message(player.Name + " has disabled DriveOnWater.");
-		return;
-
-	default:
-		ErrorMessage("Invalid option.", player);
-		return;
-	}
-}
-
 function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
 {
 	if (!arguments)
@@ -729,6 +729,118 @@ function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
 
 		SetFastSwitch(false);
 		Message(player.Name + " has disabled FastSwitch.");
+		return;
+
+	default:
+		ErrorMessage("Invalid option.", player);
+		return;
+	}
+}
+
+function PlayerCmdHandler_ShootInAir(player, cmdText, arguments) {
+	if (!arguments)
+	{
+		CmdSyntaxMessage(player, cmdText, "on/off");
+		return;
+	}
+	switch (arguments.tolower())
+	{
+	case "on":
+		if (shootInAir)
+		{
+			ErrorMessage("ShootInAir is already enabled.", player);
+			return;
+		}
+
+		SetShootInAir(true);
+		Message(player.Name + " has enabled ShootInAir.");
+		return;
+
+	case "off":
+		if (!shootInAir)
+		{
+			ErrorMessage("ShootInAir is already disabled.", player);
+			return;
+		}
+
+		SetShootInAir(false);
+		Message(player.Name + " has disabled ShootInAir.");
+		return;
+
+	default:
+		ErrorMessage("Invalid option.", player);
+		return;
+	}
+}
+
+function PlayerCmdHandler_PerfectHandling(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		CmdSyntaxMessage(player, cmdText, "on/off");
+		return;
+	}
+
+	switch (arguments.tolower())
+	{
+	case "on":
+		if (GetPerfectHandling())
+		{
+			ErrorMessage("PerfectHandling is already enabled.", player);
+			return;
+		}
+
+		SetPerfectHandling(true);
+		Message(player.Name + " has enabled PerfectHandling.");
+		return;
+
+	case "off":
+		if (!GetPerfectHandling())
+		{
+			ErrorMessage("PerfectHandling is already disabled.", player);
+			return;
+		}
+
+		SetPerfectHandling(false);
+		Message(player.Name + " has disabled PerfectHandling.");
+		return;
+
+	default:
+		ErrorMessage("Invalid option.", player);
+		return;
+	}
+}
+
+function PlayerCmdHandler_DriveOnWater(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		CmdSyntaxMessage(player, cmdText, "on/off");
+		return;
+	}
+
+	switch (arguments.tolower())
+	{
+	case "on":
+		if (GetDriveOnWater())
+		{
+			ErrorMessage("DriveOnWater is already enabled.", player);
+			return;
+		}
+
+		SetDriveOnWater(true);
+		Message(player.Name + " has enabled DriveOnWater.");
+		return;
+
+	case "off":
+		if (!GetDriveOnWater())
+		{
+			ErrorMessage("DriveOnWater is already disabled.", player);
+			return;
+		}
+
+		SetDriveOnWater(false);
+		Message(player.Name + " has disabled DriveOnWater.");
 		return;
 
 	default:
@@ -775,42 +887,6 @@ function PlayerCmdHandler_FlyingCars(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_ShootInAir(player, cmdText, arguments) {
-	if (!arguments)
-	{
-		CmdSyntaxMessage(player, cmdText, "on/off");
-		return;
-	}	
-	switch (arguments.tolower())
-	{
-	case "on":
-		if (shootInAir)
-		{
-			ErrorMessage("ShootInAir is already enabled.", player);
-			return;
-		}
-
-		SetShootInAir(true);
-		Message(player.Name + " has enabled ShootInAir.");
-		return;
-
-	case "off":
-		if (!shootInAir)
-		{
-			ErrorMessage("ShootInAir is already disabled.", player);
-			return;
-		}
-
-		SetShootInAir(false);
-		Message(player.Name + " has disabled ShootInAir.");
-		return;
-
-	default:
-		ErrorMessage("Invalid option.", player);
-		return;
-	}
-}
-
 function PlayerCmdHandler_QuakeMode(player, cmdText, arguments) {
 	toggleQuakeMode();
 
@@ -819,5 +895,5 @@ function PlayerCmdHandler_QuakeMode(player, cmdText, arguments) {
 	}
 	else {
 		Message(player.Name + " stopped Quake Mode.");
-	} 
+	}
 }

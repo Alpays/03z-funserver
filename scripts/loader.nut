@@ -6,9 +6,10 @@
 
 function InitializeGlobals()
 {
-	playerDataPool = array(MAX_PLAYERS);
-	playerCmdPool  = [];
-	newsreelTexts  =
+	playerDataPool     = array(MAX_PLAYERS);
+	playerCmdPool      = [];
+	playerSpawnWeapons = {}; // {"lowerplayername" = [w1, w2, w3, ...], ...}
+	newsreelTexts      =
 	[
 		"Type /c cmds to display a list of commands.",
 		"Don't want to spawn where you last died anymore? Type /c diepos to toggle this feature on or off.",
@@ -134,7 +135,8 @@ function AddPlayerCommands()
 		"time", "t"
 	);
 	AddPlayerCommand(
-		PlayerCmdHandler_TimeRate, PLAYERCMD_FLAG_NONE,
+		PlayerCmdHandler_TimeRate,
+		PLAYERCMD_FLAG_NONE,
 		"timerate", "tr"
 	);
 	AddPlayerCommand(
@@ -153,14 +155,24 @@ function AddPlayerCommands()
 		"waterlevel", "wl"
 	);
 	AddPlayerCommand(
-		PlayerCmdHandler_DriveOnWater,
-		PLAYERCMD_FLAG_NONE,
-		"driveonwater", "dow"
-	);
-	AddPlayerCommand(
 		PlayerCmdHandler_FastSwitch,
 		PLAYERCMD_FLAG_NONE,
 		"fastswitch", "fs"
+	);
+	AddPlayerCommand(
+		PlayerCmdHandler_ShootInAir,
+		PLAYERCMD_FLAG_NONE,
+		"shootinair", "sia"
+	);
+	AddPlayerCommand(
+		PlayerCmdHandler_PerfectHandling,
+		PLAYERCMD_FLAG_NONE,
+		"perfecthandling", "ph"
+	);
+	AddPlayerCommand(
+		PlayerCmdHandler_DriveOnWater,
+		PLAYERCMD_FLAG_NONE,
+		"driveonwater", "dow"
 	);
 	AddPlayerCommand(
 		PlayerCmdHandler_FlyingCars,
@@ -171,11 +183,6 @@ function AddPlayerCommands()
 		PlayerCmdHandler_QuakeMode,
 		PLAYERCMD_FLAG_NONE,
 		"quake", "quakemode", "qm"
-	);
-	AddPlayerCommand(
-		PlayerCmdHandler_ShootInAir,
-		PLAYERCMD_FLAG_NONE,
-		"shootinair", "sia"
 	);
 
 	print("Added player commands.");
