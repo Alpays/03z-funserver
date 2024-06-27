@@ -15,6 +15,27 @@ function TimerCallback_DisplayNewsreelMessage()
 	InfoMessage(newsreelTexts[newsreelIndex++]);
 }
 
+function TimerCallback_PlayerDataCleanup()
+{
+	local currentTimestamp = time();
+	local deletedDataCount = 0;
+	foreach (lowerPlayerName, playerData in playerDataPool)
+	{
+		if (playerData.lastActiveTimestamp && // Data is not active (in use)
+			((currentTimestamp - playerData.lastActiveTimestamp) > 3600 /* 1 hour */))
+		{
+			playerDataPool.rawdelete(lowerPlayerName);
+			++deletedDataCount;
+		}
+	}
+
+	if (deletedDataCount)
+	{
+		print("Deleted " + deletedDataCount + " inactive " +
+			((deletedDataCount != 1) ? "players" : "player") + " data.");
+	}
+}
+
 function TimerCallback_HealPlayer(playerId, initialPosX, initialPosY, initialPosZ)
 {
 	local player = FindPlayer(playerId);
@@ -106,12 +127,12 @@ function TimerCallback_FixPlayerVehicle(playerId, vehicleId, initialPosX, initia
 		(vehiclePos.y.tointeger() != initialPosY) ||
 		(vehiclePos.z.tointeger() != initialPosZ))
 	{
-		ErrorMessage("Vehicle repair process has been aborted - vehicle has moved from its initial position.", player);
+		ErrorMessage("Vehicle repair process has been aborted - vehicle moved from its initial position.", player);
 		return;
 	}
 
 	playerVehicle.Fix();
-	Message(player.Name + " has repaired their vehicle.");
+	Message(player.Name + " repaired their vehicle.");
 }
 
 function TimerCallback_TeleportPlayerToPlayer(playerId, targetPlayerName, initialPosX, initialPosY, initialPosZ)
@@ -164,5 +185,5 @@ function TimerCallback_TeleportPlayerToPlayer(playerId, targetPlayerName, initia
 	}
 
 	player.Pos = targetPlayer.Pos;
-	Message(player.Name + " has teleported to " + targetPlayer.Name + ".");
+	Message(player.Name + " teleported to " + targetPlayer.Name + ".");
 }

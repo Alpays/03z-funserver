@@ -4,6 +4,21 @@
  * 2024-01-10
  */
 
+// Meh
+function IsFloat(x)
+{
+	assert(typeof(x) == "string");
+	try
+	{
+		x.tofloat();
+		return true;
+	}
+	catch (e)
+	{
+		return false;
+	}
+}
+
 function SetShootInAir(toggle) {
     shootInAir = toggle;
     for(local i = 0; i < MAX_PLAYERS; ++i) {

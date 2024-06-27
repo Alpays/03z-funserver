@@ -6,50 +6,52 @@
 
 class PlayerData
 {
-	diePosEnabled = true;
-	lastDeathPos  = null;
-	spawnWeapons  = null;
-	spree         = 0;
-	processTimer  = null;
+	lastActiveTimestamp = null;
+	diePosEnabled       = true;
+	lastDeathPos        = null;
+	spawnWeapons        = null;
+	spree               = 0;
+	processTimer        = null;
+}
+
+function PlayerData::constructor()
+{
+	spawnWeapons = [];
 }
 
 // -----------------------------------------------------------------------------
-
-function NewPlayerData(player)
-{
-	local playerId = player.ID;
-	if (playerDataPool[playerId])
-	{
-		throw "player data slot " + playerId + " is already in use";
-	}
-
-	return playerDataPool[playerId] = PlayerData();
-}
-
-function DeletePlayerData(player)
-{
-	local playerId = player.ID;
-	if (!playerDataPool[playerId])
-	{
-		throw "unable to delete player data at slot " + playerId + " as there is no data at such index at all";
-	}
-
-	playerDataPool[playerId] = null;
-}
 
 function GetPlayerData(player)
 {
-	local playerId = player.ID;
-	local playerData = playerDataPool[playerId];
-	if (!playerData)
+	local lowerPlayerName = player.Name.tolower();
+	// Existing data
+	if (playerDataPool.rawin(lowerPlayerName))
 	{
-		throw "unable to retrieve player data at slot " + playerId + " as there is no data at such index at all";
+		local playerData = playerDataPool.rawget(lowerPlayerName);
+		playerData.lastActiveTimestamp = null; // Now active.
+		return playerData;
 	}
 
-	return playerData;
+	// New data
+	local newPlayerData = PlayerData();
+	playerDataPool.rawset(lowerPlayerName, newPlayerData);
+	return newPlayerData;
 }
 
 // -----------------------------------------------------------------------------
+
+function Player::IsNameValid()
+{
+	local lowerName = Name.tolower();
+	return !::IsNum(lowerName) &&
+		(lowerName != "off") &&
+		(lowerName != "no") &&
+		(lowerName != "false") &&
+		(lowerName != "on") &&
+		(lowerName != "yes") &&
+		(lowerName != "true") &&
+		(lowerName != "clear");
+}
 
 function Player::IsAlive()
 {

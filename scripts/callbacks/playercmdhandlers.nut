@@ -4,6 +4,31 @@
  * 2024-01-08
  */
 
+const TOGGLECMD_INPUT_INVALID = 0;
+const TOGGLECMD_INPUT_DISABLE = 1;
+const TOGGLECMD_INPUT_ENABLE  = 2;
+
+function ValidateToggleCommandInput(inputText)
+{
+	switch (inputText.tolower())
+	{
+	case "off":
+	case "no":
+	case "false":
+	case "0":
+		return TOGGLECMD_INPUT_DISABLE;
+
+	case "on":
+	case "yes":
+	case "true":
+	case "1":
+		return TOGGLECMD_INPUT_ENABLE;
+
+	default:
+		return TOGGLECMD_INPUT_INVALID;
+	}
+}
+
 function PlayerCmdHandler_Cmds(player, cmdText, arguments)
 {
 	local cmdList = "";
@@ -72,20 +97,9 @@ function PlayerCmdHandler_DiePos(player, cmdText, arguments)
 	}
 
 	local playerData = GetPlayerData(player);
-	switch (arguments.tolower())
+	switch (ValidateToggleCommandInput(arguments))
 	{
-	case "on":
-		if (playerData.diePosEnabled)
-		{
-			ErrorMessage("You already spawn where you last died.", player);
-			return;
-		}
-
-		playerData.diePosEnabled = true;
-		PrivMessage("You will spawn where you last died from now on.", player);
-		return;
-
-	case "off":
+	case TOGGLECMD_INPUT_DISABLE:
 		if (!playerData.diePosEnabled)
 		{
 			ErrorMessage("You already spawn at your class' spawn position.", player);
@@ -94,6 +108,17 @@ function PlayerCmdHandler_DiePos(player, cmdText, arguments)
 
 		playerData.diePosEnabled = false;
 		PrivMessage("You will spawn at your class' spawn position from now on.", player);
+		return;
+
+	case TOGGLECMD_INPUT_ENABLE:
+		if (playerData.diePosEnabled)
+		{
+			ErrorMessage("You already spawn where you last died.", player);
+			return;
+		}
+
+		playerData.diePosEnabled = true;
+		PrivMessage("You will spawn where you last died from now on.", player);
 		return;
 
 	default:
@@ -158,7 +183,7 @@ function PlayerCmdHandler_Eject(player, cmdText, arguments)
 {
 	local playerPos = player.Pos;
 	player.Pos = Vector(playerPos.x, playerPos.y, playerPos.z + 10.0);
-	Message(player.Name + " has ejected themselves from their vehicle.");
+	Message(player.Name + " ejected themselves from their vehicle.");
 }
 
 function PlayerCmdHandler_Wep(player, cmdText, arguments)
@@ -200,13 +225,12 @@ function PlayerCmdHandler_SpawnWep(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
-		CmdSyntaxMessage(player, cmdText, "weapon list/off");
+		CmdSyntaxMessage(player, cmdText, "weapon list/clear");
 		return;
 	}
 
 	local playerData = GetPlayerData(player);
-	arguments = arguments.tolower();
-	if (arguments == "off")
+	if (arguments.tolower() == "clear")
 	{
 		if (!playerData.spawnWeapons.len())
 		{
@@ -529,7 +553,7 @@ function PlayerCmdHandler_Weather(player, cmdText, arguments)
 	}
 
 	SetWeather(newWeather);
-	Message(player.Name + " has changed weather to " + newWeather + ".");
+	Message(player.Name + " changed weather to " + newWeather + ".");
 }
 
 function PlayerCmdHandler_Time(player, cmdText, arguments)
@@ -581,7 +605,7 @@ function PlayerCmdHandler_Time(player, cmdText, arguments)
 	}
 
 	SetTime(newHour, newMinute);
-	Message(format("%s has changed time to %02d:%02d.", player.Name, newHour, newMinute));
+	Message(format("%s changed time to %02d:%02d.", player.Name, newHour, newMinute));
 }
 
 function PlayerCmdHandler_TimeRate(player, cmdText, arguments)
@@ -606,10 +630,10 @@ function PlayerCmdHandler_TimeRate(player, cmdText, arguments)
 	}
 
 	SetTimeRate(newTimeRate);
-	Message(player.Name + " has changed time rate to " + newTimeRate + ".");
+	Message(player.Name + " changed time rate to " + newTimeRate + ".");
 }
 
-function PlayerCmdHandler_Speed(player, cmdText, arguments)
+function PlayerCmdHandler_GameSpeed(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -618,17 +642,13 @@ function PlayerCmdHandler_Speed(player, cmdText, arguments)
 		return;
 	}
 
-	local newGameSpeed;
-	try
-	{
-		newGameSpeed = arguments.tofloat();
-	}
-	catch (x)
+	if (!IsFloat(arguments))
 	{
 		ErrorMessage("Game speed must be convertible to float.", player);
 		return;
 	}
 
+	local newGameSpeed = arguments.tofloat();
 	if (newGameSpeed == GetGamespeed())
 	{
 		ErrorMessage("Game speed is already set to " + newGameSpeed + ".", player);
@@ -636,7 +656,7 @@ function PlayerCmdHandler_Speed(player, cmdText, arguments)
 	}
 
 	SetGamespeed(newGameSpeed);
-	Message(player.Name + " has changed game speed to " + newGameSpeed + ".");
+	Message(player.Name + " changed game speed to " + newGameSpeed + ".");
 }
 
 function PlayerCmdHandler_Gravity(player, cmdText, arguments)
@@ -648,17 +668,13 @@ function PlayerCmdHandler_Gravity(player, cmdText, arguments)
 		return;
 	}
 
-	local newGravity;
-	try
-	{
-		newGravity = arguments.tofloat();
-	}
-	catch (x)
+	if (!IsFloat(arguments))
 	{
 		ErrorMessage("Gravity must be convertible to float.", player);
 		return;
 	}
 
+	local newGravity = arguments.tofloat();
 	if (newGravity == GetGravity())
 	{
 		ErrorMessage("Gravity is already set to " + newGravity + ".", player);
@@ -666,7 +682,7 @@ function PlayerCmdHandler_Gravity(player, cmdText, arguments)
 	}
 
 	SetGravity(newGravity);
-	Message(player.Name + " has changed gravity to " + newGravity + ".");
+	Message(player.Name + " changed gravity to " + newGravity + ".");
 }
 
 function PlayerCmdHandler_WaterLevel(player, cmdText, arguments)
@@ -678,17 +694,13 @@ function PlayerCmdHandler_WaterLevel(player, cmdText, arguments)
 		return;
 	}
 
-	local newWaterLevel;
-	try
-	{
-		newWaterLevel = arguments.tofloat();
-	}
-	catch (x)
+	if (!IsFloat(arguments))
 	{
 		ErrorMessage("Water level must be convertible to float.", player);
 		return;
 	}
 
+	local newWaterLevel = arguments.tofloat();
 	if (newWaterLevel == GetWaterLevel())
 	{
 		ErrorMessage("Water level is already set to " + newWaterLevel + ".", player);
@@ -696,7 +708,7 @@ function PlayerCmdHandler_WaterLevel(player, cmdText, arguments)
 	}
 
 	SetWaterLevel(newWaterLevel);
-	Message(player.Name + " has changed water level to " + newWaterLevel + ".");
+	Message(player.Name + " changed water level to " + newWaterLevel + ".");
 }
 
 function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
@@ -707,20 +719,9 @@ function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
 		return;
 	}
 
-	switch (arguments.tolower())
+	switch (ValidateToggleCommandInput(arguments))
 	{
-	case "on":
-		if (GetFastSwitch())
-		{
-			ErrorMessage("FastSwitch is already enabled.", player);
-			return;
-		}
-
-		SetFastSwitch(true);
-		Message(player.Name + " has enabled FastSwitch.");
-		return;
-
-	case "off":
+	case TOGGLECMD_INPUT_DISABLE:
 		if (!GetFastSwitch())
 		{
 			ErrorMessage("FastSwitch is already disabled.", player);
@@ -728,7 +729,18 @@ function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
 		}
 
 		SetFastSwitch(false);
-		Message(player.Name + " has disabled FastSwitch.");
+		Message(player.Name + " disabled FastSwitch.");
+		return;
+
+	case TOGGLECMD_INPUT_ENABLE:
+		if (GetFastSwitch())
+		{
+			ErrorMessage("FastSwitch is already enabled.", player);
+			return;
+		}
+
+		SetFastSwitch(true);
+		Message(player.Name + " enabled FastSwitch.");
 		return;
 
 	default:
@@ -737,26 +749,17 @@ function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_ShootInAir(player, cmdText, arguments) {
+function PlayerCmdHandler_ShootInAir(player, cmdText, arguments)
+{
 	if (!arguments)
 	{
 		CmdSyntaxMessage(player, cmdText, "on/off");
 		return;
 	}
-	switch (arguments.tolower())
+
+	switch (ValidateToggleCommandInput(arguments))
 	{
-	case "on":
-		if (shootInAir)
-		{
-			ErrorMessage("ShootInAir is already enabled.", player);
-			return;
-		}
-
-		SetShootInAir(true);
-		Message(player.Name + " has enabled ShootInAir.");
-		return;
-
-	case "off":
+	case TOGGLECMD_INPUT_DISABLE:
 		if (!shootInAir)
 		{
 			ErrorMessage("ShootInAir is already disabled.", player);
@@ -764,7 +767,18 @@ function PlayerCmdHandler_ShootInAir(player, cmdText, arguments) {
 		}
 
 		SetShootInAir(false);
-		Message(player.Name + " has disabled ShootInAir.");
+		Message(player.Name + " disabled ShootInAir.");
+		return;
+
+	case TOGGLECMD_INPUT_ENABLE:
+		if (shootInAir)
+		{
+			ErrorMessage("ShootInAir is already enabled.", player);
+			return;
+		}
+
+		SetShootInAir(true);
+		Message(player.Name + " enabled ShootInAir.");
 		return;
 
 	default:
@@ -781,20 +795,9 @@ function PlayerCmdHandler_PerfectHandling(player, cmdText, arguments)
 		return;
 	}
 
-	switch (arguments.tolower())
+	switch (ValidateToggleCommandInput(arguments))
 	{
-	case "on":
-		if (GetPerfectHandling())
-		{
-			ErrorMessage("PerfectHandling is already enabled.", player);
-			return;
-		}
-
-		SetPerfectHandling(true);
-		Message(player.Name + " has enabled PerfectHandling.");
-		return;
-
-	case "off":
+	case TOGGLECMD_INPUT_DISABLE:
 		if (!GetPerfectHandling())
 		{
 			ErrorMessage("PerfectHandling is already disabled.", player);
@@ -802,7 +805,18 @@ function PlayerCmdHandler_PerfectHandling(player, cmdText, arguments)
 		}
 
 		SetPerfectHandling(false);
-		Message(player.Name + " has disabled PerfectHandling.");
+		Message(player.Name + " disabled PerfectHandling.");
+		return;
+
+	case TOGGLECMD_INPUT_ENABLE:
+		if (GetPerfectHandling())
+		{
+			ErrorMessage("PerfectHandling is already enabled.", player);
+			return;
+		}
+
+		SetPerfectHandling(true);
+		Message(player.Name + " enabled PerfectHandling.");
 		return;
 
 	default:
@@ -819,20 +833,9 @@ function PlayerCmdHandler_DriveOnWater(player, cmdText, arguments)
 		return;
 	}
 
-	switch (arguments.tolower())
+	switch (ValidateToggleCommandInput(arguments))
 	{
-	case "on":
-		if (GetDriveOnWater())
-		{
-			ErrorMessage("DriveOnWater is already enabled.", player);
-			return;
-		}
-
-		SetDriveOnWater(true);
-		Message(player.Name + " has enabled DriveOnWater.");
-		return;
-
-	case "off":
+	case TOGGLECMD_INPUT_DISABLE:
 		if (!GetDriveOnWater())
 		{
 			ErrorMessage("DriveOnWater is already disabled.", player);
@@ -840,7 +843,18 @@ function PlayerCmdHandler_DriveOnWater(player, cmdText, arguments)
 		}
 
 		SetDriveOnWater(false);
-		Message(player.Name + " has disabled DriveOnWater.");
+		Message(player.Name + " disabled DriveOnWater.");
+		return;
+
+	case TOGGLECMD_INPUT_ENABLE:
+		if (GetDriveOnWater())
+		{
+			ErrorMessage("DriveOnWater is already enabled.", player);
+			return;
+		}
+
+		SetDriveOnWater(true);
+		Message(player.Name + " enabled DriveOnWater.");
 		return;
 
 	default:
@@ -857,20 +871,9 @@ function PlayerCmdHandler_FlyingCars(player, cmdText, arguments)
 		return;
 	}
 
-	switch (arguments.tolower())
+	switch (ValidateToggleCommandInput(arguments))
 	{
-	case "on":
-		if (GetFlyingCars())
-		{
-			ErrorMessage("FlyingCars is already enabled.", player);
-			return;
-		}
-
-		SetFlyingCars(true);
-		Message(player.Name + " has enabled FlyingCars.");
-		return;
-
-	case "off":
+	case TOGGLECMD_INPUT_DISABLE:
 		if (!GetFlyingCars())
 		{
 			ErrorMessage("FlyingCars is already disabled.", player);
@@ -878,7 +881,18 @@ function PlayerCmdHandler_FlyingCars(player, cmdText, arguments)
 		}
 
 		SetFlyingCars(false);
-		Message(player.Name + " has disabled FlyingCars.");
+		Message(player.Name + " disabled FlyingCars.");
+		return;
+
+	case TOGGLECMD_INPUT_ENABLE:
+		if (GetFlyingCars())
+		{
+			ErrorMessage("FlyingCars is already enabled.", player);
+			return;
+		}
+
+		SetFlyingCars(true);
+		Message(player.Name + " enabled FlyingCars.");
 		return;
 
 	default:

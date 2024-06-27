@@ -16,12 +16,22 @@ const PLAYERCMD_FLAG_ONFOOT    = 0x04; // 0100
 const PLAYERCMD_FLAG_INVEHICLE = 0x08; // 1000
 
 /* Containers */
-playerDataPool     <- null;
-playerCmdPool      <- null;
-playerSpawnWeapons <- null;
-newsreelTexts      <- null;
-newsreelIndex      <- 0;
-shootInAir         <- false;
+playerDataPool <- {}; // {"lowerplayername" = ::PlayerData(), ...}
+playerCmdPool  <- [];
+newsreelTexts  <-
+[
+	"Type /c cmds to display a list of commands.",
+	"Don't want to spawn where you last died anymore? Type /c diepos to toggle this feature on or off.",
+	"Low on health? Type /c heal to heal yourself.",
+	"Type /c fix to repair a wrecked vehicle.",
+	"Type /c wep to acquire any weapon(s) you want at any time!",
+	"Remove whatever weapons you have in hand with /c disarm.",
+	"Stuck in a flipped vehicle? Type /c eject to eject yourself from it.",
+	"Tired of typing /c wep every time you spawn? /c spawnwep allows you to spawn with any weapons you choose!",
+	"Type /c goto to teleport to a desired player."
+];
+newsreelIndex <- 0;
+shootInAir    <- false;
 
 // Implicitly prepends "scripts/" directory.
 function LoadMultipleScriptFiles(...)
@@ -47,7 +57,6 @@ function onScriptLoad()
 		"callbacks/playercmdhandlers.nut"
 	);
 
-	InitializeGlobals();
 	ApplyServerSettings();
 	AddPlayerCommands();
 	LoadServerTimers();
@@ -58,35 +67,19 @@ function onScriptLoad()
 
 function onPlayerJoin(player)
 {
-	local playerData;
-	try
+	local playerName = player.Name;
+	if (!player.IsNameValid())
 	{
-		playerData = NewPlayerData(player);
-	}
-	catch (error)
-	{
-		print(error);
-		ErrorMessage("Server error: " + error + ".", player);
+		Message("Kicking out " + playerName + " for invalid nickname.");
 		KickPlayer(player);
 		return;
 	}
 
 	player.ShootInAir = shootInAir;
 
-	local playerName = player.Name;
-	local lowerPlayerName = playerName.tolower();
-	if (playerSpawnWeapons.rawin(lowerPlayerName))
-	{
-		playerData.spawnWeapons = playerSpawnWeapons.rawget(lowerPlayerName);
-	}
-	else
-	{
-		playerSpawnWeapons.rawset(lowerPlayerName, playerData.spawnWeapons = []);
-	}
-
 	InfoMessage("Welcome to " + SERVER_NAME + ", " + playerName + "!", player);
 	InfoMessage("Type /c cmds to view a list of commands.", player);
-	if (playerName.tolower() == "[r3v]kelvin")
+	if (playerName.tolower().find("kelvin") != null)
 	{
 		AnnounceAll("Money Success Fame Glamour", 0);
 	}
@@ -94,26 +87,41 @@ function onPlayerJoin(player)
 
 function onPlayerPart(player, reason)
 {
-	local playerData = GetPlayerData(player);
-
 	player.EndKillingSpree();
-	if (playerData.processTimer) { playerData.processTimer.Delete(); }
 
-	DeletePlayerData(player);
+	local playerData = GetPlayerData(player);
+	if (playerData.processTimer)
+	{
+		playerData.processTimer.Delete();
+		playerData.processTimer = null;
+	}
+	playerData.lastActiveTimestamp = time(); // Data is now inactive.
+}
+
+function onPlayerRequestClass(player, classId, teamId, skinId)
+{
+	Announce((teamId == 255) ? "~h~free team" : "", player, 1);
 }
 
 function onPlayerSpawn(player)
 {
+	Announce("", player, 1);
+
 	local playerData = GetPlayerData(player);
 
-	/* Diepos */
+	// Diepos
 	if (playerData.diePosEnabled && playerData.lastDeathPos)
 	{
 		player.Pos = playerData.lastDeathPos;
 	}
+	// Default spawn
+	else if (player.Skin == 95 /* Vercetti Guy #1 */)
+	{
+		player.SetInterior(2); // Mansion
+	}
 
 	/* Spawn weapons */
-	if (playerData.spawnWeapons.len() && !disableSpawnWeps)
+	if (!disableSpawnWeps && playerData.spawnWeapons.len())
 	{
 		// Disarm player.
 		player.SetWeapon(WEP_FIST, 0);
@@ -130,7 +138,6 @@ function onPlayerSpawn(player)
 function onPlayerDeath(player, reason)
 {
 	local playerData = GetPlayerData(player);
-
 	// Update player's last death position.
 	playerData.lastDeathPos = (reason != WEP_DROWNED) ? player.Pos : null;
 
@@ -139,9 +146,7 @@ function onPlayerDeath(player, reason)
 
 function onPlayerKill(killer, player, reason, bodypart)
 {
-	//local killerData = GetPlayerData(killer);
 	local playerData = GetPlayerData(player);
-
 	// Update player's last death position.
 	playerData.lastDeathPos = player.Pos;
 

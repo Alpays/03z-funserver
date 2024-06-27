@@ -4,27 +4,6 @@
  * 2024-06-20
  */
 
-function InitializeGlobals()
-{
-	playerDataPool     = array(MAX_PLAYERS);
-	playerCmdPool      = [];
-	playerSpawnWeapons = {}; // {"lowerplayername" = [w1, w2, w3, ...], ...}
-	newsreelTexts      =
-	[
-		"Type /c cmds to display a list of commands.",
-		"Don't want to spawn where you last died anymore? Type /c diepos to toggle this feature on or off.",
-		"Low on health? Type /c heal to heal yourself.",
-		"Type /c fix to repair a wrecked vehicle.",
-		"Type /c wep to acquire any weapon(s) you want at any time!",
-		"Remove whatever weapons you have in hand with /c disarm.",
-		"Stuck in a flipped vehicle? Type /c eject to eject yourself from it.",
-		"Tired of typing /c wep every time you spawn? /c spawnwep allows you to spawn with any weapons you choose!",
-		"Type /c goto to teleport to a desired player."
-	];
-
-	print("Initialized global containers.");
-}
-
 function ApplyServerSettings()
 {
 	SetWeatherLock(true);
@@ -140,7 +119,7 @@ function AddPlayerCommands()
 		"timerate", "tr"
 	);
 	AddPlayerCommand(
-		PlayerCmdHandler_Speed,
+		PlayerCmdHandler_GameSpeed,
 		PLAYERCMD_FLAG_NONE,
 		"gamespeed", "gs"
 	);
@@ -190,7 +169,8 @@ function AddPlayerCommands()
 
 function LoadServerTimers()
 {
-	NewTimer(TimerCallback_DisplayNewsreelMessage, 60000, 0);
+	NewTimer(TimerCallback_DisplayNewsreelMessage, 60000 /* 1 minute */, 0);
+	NewTimer(TimerCallback_PlayerDataCleanup, 600000 /* 10 minutes */, 0);
 
 	print("Loaded server timers.");
 }
