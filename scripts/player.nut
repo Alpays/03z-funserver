@@ -27,9 +27,7 @@ function GetPlayerData(player)
 	// Existing data
 	if (playerDataPool.rawin(lowerPlayerName))
 	{
-		local playerData = playerDataPool.rawget(lowerPlayerName);
-		playerData.lastActiveTimestamp = null; // Now active.
-		return playerData;
+		return playerDataPool.rawget(lowerPlayerName);
 	}
 
 	// New data

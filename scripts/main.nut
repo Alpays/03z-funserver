@@ -75,6 +75,12 @@ function onPlayerJoin(player)
 		return;
 	}
 
+	// Create player data if non-existent, otherwise just retrieve
+	// whatever data belonged to this player previously.
+	local playerData = GetPlayerData(player);
+	// (Existing-data-only) Now active.
+	playerData.lastActiveTimestamp = null;
+
 	player.ShootInAir = shootInAir;
 
 	InfoMessage("Welcome to " + SERVER_NAME + ", " + playerName + "!", player);

@@ -22,7 +22,7 @@ function TimerCallback_PlayerDataCleanup()
 	foreach (lowerPlayerName, playerData in playerDataPool)
 	{
 		if (playerData.lastActiveTimestamp && // Data is not active (in use)
-			((currentTimestamp - playerData.lastActiveTimestamp) > 3600 /* 1 hour */))
+			((currentTimestamp - playerData.lastActiveTimestamp) >= 3600 /* 1 hour */))
 		{
 			playerDataPool.rawdelete(lowerPlayerName);
 			++deletedDataCount;
