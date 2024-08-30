@@ -3,8 +3,8 @@
 VC-MP 0.3z R2 Squirrel server made for simple plays and gatherings.
 
 # Features
-* Free for all deathmatch gamemode \
-* Basic commands to change the play settings such as gravity, speed and some other rules \
+* Free for all deathmatch gamemode 
+* Basic commands to change the play settings such as gravity, speed and some other rules 
 * Quake Mode.
 
 # Credits
