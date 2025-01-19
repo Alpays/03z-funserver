@@ -1,8 +1,10 @@
 /*
  * Just4Fun Vice City: Multiplayer (VC:MP) 0.3z R2 server
- * Authors: sfwidde ([R3V]Kelvin) and [VU]Alpays
+ * Authors: sfwidde ([SS]Kelvin) and [VU]Alpays
  * 2024-01-08
  */
+
+// -----------------------------------------------------------------------------
 
 class PlayerCmd
 {
@@ -13,23 +15,20 @@ class PlayerCmd
 
 function PlayerCmd::constructor(identifiers, handler, permissionFlags)
 {
-	this.identifiers     = identifiers;
-	this.handler         = handler;
+	this.identifiers = identifiers;
+	this.handler = handler;
 	this.permissionFlags = permissionFlags;
 }
 
 // -----------------------------------------------------------------------------
 
-function AddPlayerCommand(handler, permissionFlags, ...)
+function AddPlayerCmd(handler, permissionFlags, ...)
 {
-	if (!vargv.len())
-	{
-		throw "player command must have at least one identifier";
-	}
+	if (!vargv.len()) { throw "player command must have at least one identifier"; }
 
 	foreach (identifier in vargv)
 	{
-		if (FindPlayerCommand(identifier))
+		if (FindPlayerCmd(identifier))
 		{
 			throw "player command \"" + identifier + "\" already exists";
 		}
@@ -46,7 +45,7 @@ function AddPlayerCommand(handler, permissionFlags, ...)
 	playerCmdPool.append(PlayerCmd(vargv, handler, permissionFlags));
 }
 
-function FindPlayerCommand(identifier)
+function FindPlayerCmd(identifier)
 {
 	identifier = identifier.tolower();
 	foreach (cmd in playerCmdPool)
@@ -61,3 +60,5 @@ function FindPlayerCommand(identifier)
 	}
 	return null;
 }
+
+// -----------------------------------------------------------------------------

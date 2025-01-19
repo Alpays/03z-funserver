@@ -1,14 +1,16 @@
 /*
  * Just4Fun Vice City: Multiplayer (VC:MP) 0.3z R2 server
- * Authors: sfwidde ([R3V]Kelvin) and [VU]Alpays
+ * Authors: sfwidde ([SS]Kelvin) and [VU]Alpays
  * 2024-01-08
  */
+
+// -----------------------------------------------------------------------------
 
 const TOGGLECMD_INPUT_INVALID = 0;
 const TOGGLECMD_INPUT_DISABLE = 1;
 const TOGGLECMD_INPUT_ENABLE  = 2;
 
-function ValidateToggleCommandInput(inputText)
+function ValidateToggleCmdInput(inputText)
 {
 	switch (inputText.tolower())
 	{
@@ -29,49 +31,48 @@ function ValidateToggleCommandInput(inputText)
 	}
 }
 
-function PlayerCmdHandler_Cmds(player, cmdText, arguments)
+// -----------------------------------------------------------------------------
+
+function PlayerCmd_Cmds(player, cmdText, arguments)
 {
 	local cmdList = "";
-	//PrivMessage("'/c'-prefixed commands:", player);
+	PrivMessage("Commands must be prefixed with either '/c' or '!'.", player);
 	foreach (i, cmd in playerCmdPool)
 	{
 		cmdList += cmdList.len() ? (", " + cmd.identifiers[0]) : cmd.identifiers[0];
-		// Output what we have every 10 commands so the server doesn't crash on long messages.
+		// Output what we have every 10 commands so the server doesn't crash on long messages
 		if (!((i + 1) % 10))
 		{
-			PrivMessage(cmdList, player);
+			InfoMessageAlt(cmdList, player);
 			cmdList = "";
 		}
 	}
-	// In case we still have something to output.
-	if (cmdList.len())
-	{
-		PrivMessage(cmdList, player);
-	}
+	// In case we still have something to output
+	if (cmdList.len()) { InfoMessageAlt(cmdList, player); }
 }
 
-function PlayerCmdHandler_Credits(player, cmdText, arguments)
+function PlayerCmd_Credits(player, cmdText, arguments)
 {
-	Message(SERVER_NAME + " by [R3V]Kelvin and [VU]Alpays");
+	Message(SERVER_NAME + " by [SS]Kelvin and [VU]Alpays");
 	Message("Special credits: Hanney (hosting)");
 	Message("Requested by " + player.Name + ".");
 }
 
-function PlayerCmdHandler_Pos(player, cmdText, arguments)
+function PlayerCmd_Pos(player, cmdText, arguments)
 {
 	local msg = "(" + player.Pos + "), " + player.Angle;
 	MessagePlayer(msg, player);
 	print(player.Name + "'s position: " + msg);
 }
 
-function PlayerCmdHandler_Spree(player, cmdText, arguments) {
+function PlayerCmd_Spree(player, cmdText, arguments) {
 	local playerlist = "";
 	local count = 0;
 	for(local i = 0; i < MAX_PLAYERS; ++i) {
 		local p = FindPlayer(i)
 		if(p)
 		{
-			local playerData = GetPlayerData(p)
+			local playerData = p.GetData();
 			if(playerData.spree >= 5) {
 				playerlist += p.Name + " (" + playerData.spree + ") ";
 				++count;
@@ -88,7 +89,7 @@ function PlayerCmdHandler_Spree(player, cmdText, arguments) {
 	}
 }
 
-function PlayerCmdHandler_DiePos(player, cmdText, arguments)
+function PlayerCmd_DiePos(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -96,28 +97,27 @@ function PlayerCmdHandler_DiePos(player, cmdText, arguments)
 		return;
 	}
 
-	local playerData = GetPlayerData(player);
-	switch (ValidateToggleCommandInput(arguments))
+	switch (ValidateToggleCmdInput(arguments))
 	{
 	case TOGGLECMD_INPUT_DISABLE:
-		if (!playerData.diePosEnabled)
+		if (!player.GetLastDeathPosEnabled())
 		{
 			ErrorMessage("You already spawn at your class' spawn position.", player);
 			return;
 		}
 
-		playerData.diePosEnabled = false;
+		player.SetLastDeathPosEnabled(false);
 		PrivMessage("You will spawn at your class' spawn position from now on.", player);
 		return;
 
 	case TOGGLECMD_INPUT_ENABLE:
-		if (playerData.diePosEnabled)
+		if (player.GetLastDeathPosEnabled())
 		{
 			ErrorMessage("You already spawn where you last died.", player);
 			return;
 		}
 
-		playerData.diePosEnabled = true;
+		player.SetLastDeathPosEnabled(true);
 		PrivMessage("You will spawn where you last died from now on.", player);
 		return;
 
@@ -127,26 +127,21 @@ function PlayerCmdHandler_DiePos(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_Heal(player, cmdText, arguments)
+function PlayerCmd_Heal(player, cmdText, arguments)
 {
 	if (player.Health >= 100)
 	{
-		ErrorMessage("You don't need to be healed!", player);
+		ErrorMessage("You don't need to be healed.", player);
 		return;
 	}
 
-	local playerData = GetPlayerData(player);
-	// Suppress any process our player is waiting for to finish...
-	if (playerData.processTimer) { playerData.processTimer.Delete(); }
-
 	local playerPos = player.Pos;
-	playerData.processTimer = NewTimer(TimerCallback_HealPlayer, 3000, 1,
-		player.ID, playerPos.x.tointeger(), playerPos.y.tointeger(), playerPos.z.tointeger());
-	PrivMessage("Stand still for 3 seconds for healing process to be successful. If you move, " +
-		"you won't be healed.", player);
+	player.SetProcessTimer(NewTimer(TimerCallback_HealPlayer, 3000, 1, player.ID,
+		playerPos.x.tointeger(), playerPos.y.tointeger(), playerPos.z.tointeger()));
+	PrivMessage("Stand still for 3 seconds or healing process will be unsuccessful.", player);
 }
 
-function PlayerCmdHandler_Fix(player, cmdText, arguments)
+function PlayerCmd_Fix(player, cmdText, arguments)
 {
 	local vehicle = player.Vehicle;
 	local vehicleHealth = vehicle.Health;
@@ -162,33 +157,34 @@ function PlayerCmdHandler_Fix(player, cmdText, arguments)
 		return;
 	}
 
-	local playerData = GetPlayerData(player);
-	// Suppress any process our player is waiting for to finish...
-	if (playerData.processTimer) { playerData.processTimer.Delete(); }
-
 	local vehiclePos = vehicle.Pos;
-	playerData.processTimer = NewTimer(TimerCallback_FixPlayerVehicle, 5000, 1,
-		player.ID, vehicle.ID, vehiclePos.x.tointeger(), vehiclePos.y.tointeger(), vehiclePos.z.tointeger());
-	PrivMessage("Vehicle must stand still for 5 seconds for repair process to be successful. " +
-		"If it moves, it won't be repaired.", player);
+	player.SetProcessTimer(NewTimer(TimerCallback_FixPlayerVehicle, 5000, 1, player.ID, vehicle.ID,
+		vehiclePos.x.tointeger(), vehiclePos.y.tointeger(), vehiclePos.z.tointeger()));
+	PrivMessage("Vehicle must stand still for 5 seconds or repair process will be unsuccessful.", player);
 }
 
-function PlayerCmdHandler_Disarm(player, cmdText, arguments)
+function PlayerCmd_Disarm(player, cmdText, arguments)
 {
+	if (GetQuakeMode())
+	{
+		ErrorMessage("You cannot use this command in quake mode.", player);
+		return;
+	}
+
 	player.SetWeapon(WEP_FIST, 0);
 	PrivMessage("You have been disarmed.", player);
 }
 
-function PlayerCmdHandler_Eject(player, cmdText, arguments)
+function PlayerCmd_Eject(player, cmdText, arguments)
 {
 	local playerPos = player.Pos;
 	player.Pos = Vector(playerPos.x, playerPos.y, playerPos.z + 10.0);
 	Message(player.Name + " ejected themselves from their vehicle.");
 }
 
-function PlayerCmdHandler_Wep(player, cmdText, arguments)
+function PlayerCmd_Wep(player, cmdText, arguments)
 {
-	if(quakeMode) {
+	if(GetQuakeMode()) {
 		ErrorMessage("You cannot use this command in quake mode.", player);
 		return;
 	}
@@ -203,7 +199,7 @@ function PlayerCmdHandler_Wep(player, cmdText, arguments)
 	local givenWeaponCount = 0;
 	foreach (inputWeapon in split(arguments, " "))
 	{
-		// Convert input weapon to int.
+		// Convert input weapon to int
 		weaponId = IsNum(inputWeapon) ? inputWeapon.tointeger() : GetWeaponID(inputWeapon);
 		// Make sure we are processing a valid weapon...
 		if ((weaponId < WEP_BRASSKNUCKLES) || (weaponId == 13) || (weaponId > WEP_MINIGUN))
@@ -215,13 +211,10 @@ function PlayerCmdHandler_Wep(player, cmdText, arguments)
 		player.SetWeapon(weaponId, 1000);
 		++givenWeaponCount;
 	}
-	if (givenWeaponCount)
-	{
-		PrivMessage("Weapon" + ((givenWeaponCount != 1) ? "s" : "") + " received.", player);
-	}
+	if (givenWeaponCount) { PrivMessage("Weapon" + ((givenWeaponCount != 1) ? "s" : "") + " received.", player); }
 }
 
-function PlayerCmdHandler_SpawnWep(player, cmdText, arguments)
+function PlayerCmd_SpawnWep(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -229,26 +222,25 @@ function PlayerCmdHandler_SpawnWep(player, cmdText, arguments)
 		return;
 	}
 
-	local playerData = GetPlayerData(player);
 	if (arguments.tolower() == "clear")
 	{
-		if (!playerData.spawnWeapons.len())
+		if (!player.HasSpawnWeaponsSet())
 		{
 			ErrorMessage("You have not set your spawn weapons yet.", player);
 			return;
 		}
 
-		playerData.spawnWeapons.clear();
+		player.ClearSpawnWeapons();
 		PrivMessage("Your spawn weapons have been cleared.", player);
 		return;
 	}
 
 	local weaponId;
-	local canGiveWeapons = (player.IsAlive() && !quakeMode);
+	local canGiveWeapons = (player.IsAlive() && !GetQuakeMode());
 	local addedWeaponCount = 0;
 	foreach (inputWeapon in split(arguments, " "))
 	{
-		// Convert input weapon to int.
+		// Convert input weapon to int
 		weaponId = IsNum(inputWeapon) ? inputWeapon.tointeger() : GetWeaponID(inputWeapon);
 		// Make sure we are processing a valid weapon...
 		if ((weaponId < WEP_BRASSKNUCKLES) || (weaponId == 13) || (weaponId > WEP_MINIGUN))
@@ -257,25 +249,19 @@ function PlayerCmdHandler_SpawnWep(player, cmdText, arguments)
 			continue;
 		}
 
-		// We are processing a valid weapon now, so clear previous
-		// spawn weapons if we haven't yet.
+		// We are processing a valid weapon now, so clear
+		// previous spawn weapons if we haven't done so yet
 		if (!addedWeaponCount)
 		{
-			playerData.spawnWeapons.clear();
-			// Disarm player.
-			if (canGiveWeapons)
-			{
-				player.SetWeapon(WEP_FIST, 0);
-			}
+			player.ClearSpawnWeapons();
+			// Disarm player
+			if (canGiveWeapons) { player.SetWeapon(WEP_FIST, 0); }
 		}
 
-		playerData.spawnWeapons.append(weaponId);
+		player.AddSpawnWeapon(weaponId);
 		++addedWeaponCount;
-		// Give just added weapon to player's hand, if allowed to.
-		if (canGiveWeapons)
-		{
-			player.SetWeapon(weaponId, 1000);
-		}
+		// Give just added weapon to player's hand, if allowed to
+		if (canGiveWeapons) { player.SetWeapon(weaponId, 1000); }
 	}
 	if (addedWeaponCount)
 	{
@@ -283,13 +269,80 @@ function PlayerCmdHandler_SpawnWep(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_HP(player, cmdText, arguments)
+function PlayerCmd_Vehicle(player, cmdText, arguments)
 {
-	local playerId = player.ID;
 	if (!arguments)
 	{
-		arguments = playerId.tostring();
+		CmdSyntaxMessage(player, cmdText, "vehicle ID");
+		return;
 	}
+
+	if (!IsNum(arguments))
+	{
+		ErrorMessage("Vehicle ID must be a number.", player);
+		return;
+	}
+
+	local vehicle = FindVehicle(arguments.tointeger());
+	if (!vehicle)
+	{
+		ErrorMessage("No vehicle with such ID exists.", player);
+		return;
+	}
+
+	local driver = vehicle.Driver;
+	if (driver)
+	{
+		ErrorMessage("This vehicle is currently being driven by " +
+			((driver.ID != player.ID) ? driver.Name : "yourself") + ".", player);
+		return;
+	}
+
+	// Does not work properly because vehicles' health do not reset upon respawning (tf?)
+	//if (vehicle.Health < 250.0)
+	//{
+	//	ErrorMessage("You cannot pull a wrecked vehicle.", player);
+	//	return;
+	//}
+
+	local playerData = player.GetData();
+	local ownedVehicle = playerData.ownedVehicle;
+	local vehicleId = vehicle.ID;
+	if (ownedVehicle)
+	{
+		driver = ownedVehicle.Driver;
+		// Vehicle owned by player is currently being driven
+		if (driver)
+		{
+			// By themselves
+			if (driver.ID == player.ID)
+			{
+				ErrorMessage("You must exit this vehicle to use this command.", player);
+				return;
+			}
+
+			// By someone else -- do not respawn in this case
+		}
+		// Currently unoccupied in the driver's seat, respawn only
+		// if they're pulling a different vehicle
+		else if (ownedVehicle.ID != vehicleId)
+		{
+			ownedVehicle.Respawn();
+		}
+	}
+
+	local playerPos = player.Pos;
+	local vehicleName = GetVehicleNameFromModel(vehicle.Model);
+	vehicle.Pos = Vector((playerPos.x + 5.0), playerPos.y, (playerPos.z - 1.0));
+	playerData.ownedVehicle = vehicle;
+	Message(player.Name + " pulled " + GetAOrAn(vehicleName) + " " + vehicleName + " " +
+		"(ID: " + vehicleId + ") to their position.");
+}
+
+function PlayerCmd_HP(player, cmdText, arguments)
+{
+	local playerId = player.ID;
+	if (!arguments) { arguments = playerId.tostring(); }
 
 	local targetPlayer = GetPlayer(arguments);
 	if (!targetPlayer)
@@ -312,17 +365,14 @@ function PlayerCmdHandler_HP(player, cmdText, arguments)
 		return;
 	}
 
-	Message(targetPlayer.Name + "'s health: " + targetPlayer.Health + "%. Requested by " +
-		(isSelf ? "themselves" : player.Name) + ".");
+	Message(targetPlayer.Name + "'s health: " + targetPlayer.Health + "%. " +
+		"Requested by " + (isSelf ? "themselves" : player.Name) + ".");
 }
 
-function PlayerCmdHandler_Arm(player, cmdText, arguments)
+function PlayerCmd_Arm(player, cmdText, arguments)
 {
 	local playerId = player.ID;
-	if (!arguments)
-	{
-		arguments = playerId.tostring();
-	}
+	if (!arguments) { arguments = playerId.tostring(); }
 
 	local targetPlayer = GetPlayer(arguments);
 	if (!targetPlayer)
@@ -340,22 +390,19 @@ function PlayerCmdHandler_Arm(player, cmdText, arguments)
 
 	if (targetPlayer.Vehicle)
 	{
-		ErrorMessage(isSelf ? "You cannot check your own armour because you are in a vehicle." :
-			("You cannot check " + targetPlayer.Name + "'s armour because they are in a vehicle."), player);
+		ErrorMessage(isSelf ? "You cannot check your own armor because you are in a vehicle." :
+			("You cannot check " + targetPlayer.Name + "'s armor because they are in a vehicle."), player);
 		return;
 	}
 
-	Message(targetPlayer.Name + "'s armour: " + targetPlayer.Armour + "%. Requested by " +
-		(isSelf ? "themselves" : player.Name) + ".");
+	Message(targetPlayer.Name + "'s armor: " + targetPlayer.Armour + "%. " +
+		"Requested by " + (isSelf ? "themselves" : player.Name) + ".");
 }
 
-function PlayerCmdHandler_Loc(player, cmdText, arguments)
+function PlayerCmd_Loc(player, cmdText, arguments)
 {
 	local playerId = player.ID;
-	if (!arguments)
-	{
-		arguments = playerId.tostring();
-	}
+	if (!arguments) { arguments = playerId.tostring(); }
 
 	local targetPlayer = GetPlayer(arguments);
 	if (!targetPlayer)
@@ -373,10 +420,10 @@ function PlayerCmdHandler_Loc(player, cmdText, arguments)
 	}
 
 	local targetPlayerName = targetPlayer.Name;
-	local targetPlayerPos  = targetPlayer.Pos;
-	local districtName     = GetDistrictName(targetPlayerPos.x, targetPlayerPos.y);
-	local requestedBy      = isSelf ? "themselves" : player.Name;
-	// Message for everyone, but with relative distances.
+	local targetPlayerPos = targetPlayer.Pos;
+	local districtName = GetDistrictName(targetPlayerPos.x, targetPlayerPos.y);
+	local requestedBy = (isSelf ? "themselves" : player.Name);
+	// Message for everyone, but with relative distances
 	for (local i = 0, plr, plrPos; i < MAX_PLAYERS; ++i)
 	{
 		plr = FindPlayer(i);
@@ -385,29 +432,26 @@ function PlayerCmdHandler_Loc(player, cmdText, arguments)
 		// Exclude distance if
 		// - target player is the one receiving message, because for them distance will always be zero, or
 		// - current player to send message to is unspawned, because it doesn't make any sense
-		// to measure distance for unspawned players.
+		// to measure distance for unspawned players
 		if ((i == targetPlayerId) || !plr.IsSpawned)
 		{
-			MessagePlayer(targetPlayerName + "'s location: " + districtName +
-				". Requested by " + requestedBy + ".", plr);
+			MessagePlayer(targetPlayerName + "'s location: " + districtName + ". " +
+				"Requested by " + requestedBy + ".", plr);
 		}
 		else
 		{
 			plrPos = plr.Pos;
-			MessagePlayer(targetPlayerName + "'s location: " + districtName + " (" +
-				DistanceFromPoint(plrPos.x, plrPos.y, targetPlayerPos.x, targetPlayerPos.y) +
-				"m). Requested by " + requestedBy + ".", plr);
+			MessagePlayer(targetPlayerName + "'s location: " + districtName + " " +
+				"(" + DistanceFromPoint(plrPos.x, plrPos.y, targetPlayerPos.x, targetPlayerPos.y) + "m). " +
+				"Requested by " + requestedBy + ".", plr);
 		}
 	}
 }
 
-function PlayerCmdHandler_Ping(player, cmdText, arguments)
+function PlayerCmd_Ping(player, cmdText, arguments)
 {
 	local playerId = player.ID;
-	if (!arguments)
-	{
-		arguments = playerId.tostring();
-	}
+	if (!arguments) { arguments = playerId.tostring(); }
 
 	local targetPlayer = GetPlayer(arguments);
 	if (!targetPlayer)
@@ -416,17 +460,14 @@ function PlayerCmdHandler_Ping(player, cmdText, arguments)
 		return;
 	}
 
-	Message(targetPlayer.Name + "'s ping: " + targetPlayer.Ping + ". Requested by " +
-		((targetPlayer.ID != playerId) ? player.Name : "themselves") + ".");
+	Message(targetPlayer.Name + "'s ping: " + targetPlayer.Ping + ". " +
+		"Requested by " + ((targetPlayer.ID != playerId) ? player.Name : "themselves") + ".");
 }
 
-function PlayerCmdHandler_Car(player, cmdText, arguments)
+function PlayerCmd_Car(player, cmdText, arguments)
 {
 	local playerId = player.ID;
-	if (!arguments)
-	{
-		arguments = playerId.tostring();
-	}
+	if (!arguments) { arguments = playerId.tostring(); }
 
 	local targetPlayer = GetPlayer(arguments);
 	if (!targetPlayer)
@@ -450,11 +491,64 @@ function PlayerCmdHandler_Car(player, cmdText, arguments)
 		return;
 	}
 
-	Message(targetPlayer.Name + "'s vehicle: " + GetVehicleNameFromModel(vehicle.Model) +
-		". Requested by " + (isSelf ? "themselves" : player.Name) + ".");
+	Message(targetPlayer.Name + "'s vehicle: " + GetVehicleNameFromModel(vehicle.Model) + ". " +
+		"Requested by " + (isSelf ? "themselves" : player.Name) + ".");
 }
 
-function PlayerCmdHandler_GoTo(player, cmdText, arguments)
+function PlayerCmd_CommonLoc(player, cmdText, arguments)
+{
+	local i;
+	local len = commonLocations.len();
+	local a;
+
+	if (!arguments)
+	{
+		// Display the location list
+
+		local locList = "";
+		CmdSyntaxMessage(player, cmdText, "location");
+		for (i = 0; i < len; ++i)
+		{
+			a = commonLocations[i][0][0];
+			locList += locList.len() ? (", " + a) : a;
+			if (!((i + 1) % 10))
+			{
+				InfoMessageAlt(locList, player);
+				locList = "";
+			}
+		}
+		if (locList.len()) { InfoMessageAlt(locList, player); }
+		return;
+	}
+
+	arguments = arguments.tolower();
+	local j;
+	local len2;
+	local b;
+	local locName;
+	for (i = 0; i < len; ++i)
+	{
+		a = commonLocations[i][0]; // Names
+		b = commonLocations[i][1]; // Pos
+		len2 = a.len();
+		// Over names array
+		for (j = 0; j < len2; ++j)
+		{
+			locName = a[j];
+			if (locName.find(arguments) == null) { continue; }
+
+			local playerPos = player.Pos;
+			player.SetProcessTimer(NewTimer(TimerCallback_TeleportPlayerToCommonLocation, 3000, 1, player.ID,
+				i, j, playerPos.x.tointeger(), playerPos.y.tointeger(), playerPos.z.tointeger()));
+			PrivMessage("Stand still for 3 seconds or teleporting process to common location " +
+				"\"" + locName + "\" will be unsuccessful.", player);
+			return;
+		}
+	}
+	ErrorMessage("No common location with such name exists.", player);
+}
+
+function PlayerCmd_GoTo(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -482,19 +576,15 @@ function PlayerCmdHandler_GoTo(player, cmdText, arguments)
 		return;
 	}
 
-	local playerData = GetPlayerData(player);
-	// Suppress any process our player is waiting for to finish...
-	if (playerData.processTimer) { playerData.processTimer.Delete(); }
-
 	local playerPos = player.Pos;
-	local targetPlayerName = targetPlayer.Name; // Using name rather than ID is 'safer' in this case.
-	playerData.processTimer = NewTimer(TimerCallback_TeleportPlayerToPlayer, 3000, 1,
-		playerId, targetPlayerName, playerPos.x.tointeger(), playerPos.y.tointeger(), playerPos.z.tointeger());
-	PrivMessage("Stand still for 3 seconds to teleport to " + targetPlayerName + ". If you move, " +
-		"you won't be teleported.", player);
+	local targetPlayerName = targetPlayer.Name; // Using name rather than ID is "safer" in this case
+	player.SetProcessTimer(NewTimer(TimerCallback_TeleportPlayerToPlayer, 3000, 1, playerId,
+		targetPlayerName, playerPos.x.tointeger(), playerPos.y.tointeger(), playerPos.z.tointeger()));
+	PrivMessage("Stand still for 3 seconds or teleporting process to " + targetPlayerName + " will be unsuccessful.", player);
+	PrivMessage(player.Name + " is attempting to teleport to you...", targetPlayer);
 }
 
-function PlayerCmdHandler_Ann(player, cmdText, arguments)
+function PlayerCmd_Ann(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -506,8 +596,8 @@ function PlayerCmdHandler_Ann(player, cmdText, arguments)
 	local niceTry = false;
 	foreach (char in arguments)
 	{
-		// Unfortunately, I am too lazy to determine whether our player tried to send a colored
-		// message or actually wanted to fuck up the whole server with a crashy announcement.
+		// I am too lazy to determine whether our player tried to send a colored message
+		// or they actually wanted to fuck up the whole server with a crashy announcement
 		if (char == '~')
 		{
 			niceTry = true;
@@ -517,15 +607,13 @@ function PlayerCmdHandler_Ann(player, cmdText, arguments)
 		message += char.tochar();
 	}
 
-	if (niceTry)
-	{
-		ErrorMessage("Don't even think about it, you fucking idiot.", player);
-	}
+	local playerName = player.Name;
+	if (niceTry) { Message(playerName + " is a fucking idiot. Everybody is free to bully him."); }
 	AnnounceAll(message, 0);
-	Message(player.Name + " announced: " + message);
+	Message(playerName + " announced: " + message);
 }
 
-function PlayerCmdHandler_Weather(player, cmdText, arguments)
+function PlayerCmd_Weather(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -556,7 +644,7 @@ function PlayerCmdHandler_Weather(player, cmdText, arguments)
 	Message(player.Name + " changed weather to " + newWeather + ".");
 }
 
-function PlayerCmdHandler_Time(player, cmdText, arguments)
+function PlayerCmd_Time(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -608,11 +696,12 @@ function PlayerCmdHandler_Time(player, cmdText, arguments)
 	Message(format("%s changed time to %02d:%02d.", player.Name, newHour, newMinute));
 }
 
-function PlayerCmdHandler_TimeRate(player, cmdText, arguments)
+function PlayerCmd_TimeRate(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
 		CmdSyntaxMessage(player, cmdText, "time rate");
+		PrivMessage("Default time rate is 18.", player);
 		return;
 	}
 
@@ -633,7 +722,7 @@ function PlayerCmdHandler_TimeRate(player, cmdText, arguments)
 	Message(player.Name + " changed time rate to " + newTimeRate + ".");
 }
 
-function PlayerCmdHandler_GameSpeed(player, cmdText, arguments)
+function PlayerCmd_GameSpeed(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -659,8 +748,14 @@ function PlayerCmdHandler_GameSpeed(player, cmdText, arguments)
 	Message(player.Name + " changed game speed to " + newGameSpeed + ".");
 }
 
-function PlayerCmdHandler_Gravity(player, cmdText, arguments)
+function PlayerCmd_Gravity(player, cmdText, arguments)
 {
+	if (GetQuakeMode())
+	{
+		ErrorMessage("You cannot use this command in quake mode.", player);
+		return;
+	}
+
 	if (!arguments)
 	{
 		CmdSyntaxMessage(player, cmdText, "gravity");
@@ -685,7 +780,7 @@ function PlayerCmdHandler_Gravity(player, cmdText, arguments)
 	Message(player.Name + " changed gravity to " + newGravity + ".");
 }
 
-function PlayerCmdHandler_WaterLevel(player, cmdText, arguments)
+function PlayerCmd_WaterLevel(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -711,7 +806,7 @@ function PlayerCmdHandler_WaterLevel(player, cmdText, arguments)
 	Message(player.Name + " changed water level to " + newWaterLevel + ".");
 }
 
-function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
+function PlayerCmd_FastSwitch(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -719,7 +814,7 @@ function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
 		return;
 	}
 
-	switch (ValidateToggleCommandInput(arguments))
+	switch (ValidateToggleCmdInput(arguments))
 	{
 	case TOGGLECMD_INPUT_DISABLE:
 		if (!GetFastSwitch())
@@ -749,18 +844,24 @@ function PlayerCmdHandler_FastSwitch(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_ShootInAir(player, cmdText, arguments)
+function PlayerCmd_ShootInAir(player, cmdText, arguments)
 {
+	if (GetQuakeMode())
+	{
+		ErrorMessage("You cannot use this command in quake mode.", player);
+		return;
+	}
+
 	if (!arguments)
 	{
 		CmdSyntaxMessage(player, cmdText, "on/off");
 		return;
 	}
 
-	switch (ValidateToggleCommandInput(arguments))
+	switch (ValidateToggleCmdInput(arguments))
 	{
 	case TOGGLECMD_INPUT_DISABLE:
-		if (!shootInAir)
+		if (!GetShootInAir())
 		{
 			ErrorMessage("ShootInAir is already disabled.", player);
 			return;
@@ -771,7 +872,7 @@ function PlayerCmdHandler_ShootInAir(player, cmdText, arguments)
 		return;
 
 	case TOGGLECMD_INPUT_ENABLE:
-		if (shootInAir)
+		if (GetShootInAir())
 		{
 			ErrorMessage("ShootInAir is already enabled.", player);
 			return;
@@ -787,7 +888,7 @@ function PlayerCmdHandler_ShootInAir(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_PerfectHandling(player, cmdText, arguments)
+function PlayerCmd_PerfectHandling(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -795,7 +896,7 @@ function PlayerCmdHandler_PerfectHandling(player, cmdText, arguments)
 		return;
 	}
 
-	switch (ValidateToggleCommandInput(arguments))
+	switch (ValidateToggleCmdInput(arguments))
 	{
 	case TOGGLECMD_INPUT_DISABLE:
 		if (!GetPerfectHandling())
@@ -825,7 +926,7 @@ function PlayerCmdHandler_PerfectHandling(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_DriveOnWater(player, cmdText, arguments)
+function PlayerCmd_DriveOnWater(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -833,7 +934,7 @@ function PlayerCmdHandler_DriveOnWater(player, cmdText, arguments)
 		return;
 	}
 
-	switch (ValidateToggleCommandInput(arguments))
+	switch (ValidateToggleCmdInput(arguments))
 	{
 	case TOGGLECMD_INPUT_DISABLE:
 		if (!GetDriveOnWater())
@@ -863,7 +964,7 @@ function PlayerCmdHandler_DriveOnWater(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_FlyingCars(player, cmdText, arguments)
+function PlayerCmd_FlyingCars(player, cmdText, arguments)
 {
 	if (!arguments)
 	{
@@ -871,7 +972,7 @@ function PlayerCmdHandler_FlyingCars(player, cmdText, arguments)
 		return;
 	}
 
-	switch (ValidateToggleCommandInput(arguments))
+	switch (ValidateToggleCmdInput(arguments))
 	{
 	case TOGGLECMD_INPUT_DISABLE:
 		if (!GetFlyingCars())
@@ -901,13 +1002,42 @@ function PlayerCmdHandler_FlyingCars(player, cmdText, arguments)
 	}
 }
 
-function PlayerCmdHandler_QuakeMode(player, cmdText, arguments) {
-	toggleQuakeMode();
-
-	if(quakeMode) {
-		Message(player.Name + " activated Quake Mode.");
+function PlayerCmd_QuakeMode(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		CmdSyntaxMessage(player, cmdText, "on/off");
+		return;
 	}
-	else {
-		Message(player.Name + " stopped Quake Mode.");
+
+	switch (ValidateToggleCmdInput(arguments))
+	{
+	case TOGGLECMD_INPUT_DISABLE:
+		if (!GetQuakeMode())
+		{
+			ErrorMessage("QuakeMode is already disabled.", player);
+			return;
+		}
+
+		SetQuakeMode(false);
+		Message(player.Name + " disabled QuakeMode.");
+		return;
+
+	case TOGGLECMD_INPUT_ENABLE:
+		if (GetQuakeMode())
+		{
+			ErrorMessage("QuakeMode is already enabled.", player);
+			return;
+		}
+
+		SetQuakeMode(true);
+		Message(player.Name + " enabled QuakeMode.");
+		return;
+
+	default:
+		ErrorMessage("Invalid option.", player);
+		return;
 	}
 }
+
+// -----------------------------------------------------------------------------
