@@ -14,11 +14,11 @@ const MAX_PLAYERS = 32;
 const INTERIOR_MANSION = 2;
 
 /* Player command permission flags */
-const PLAYERCMD_FLAG_NONE      = 0x00; // 0000
-const PLAYERCMD_FLAG_SPAWNED   = 0x01; // 0001
-const PLAYERCMD_FLAG_ALIVE     = 0x02; // 0010
-const PLAYERCMD_FLAG_ONFOOT    = 0x04; // 0100
-const PLAYERCMD_FLAG_INVEHICLE = 0x08; // 1000
+const CMD_FLAG_NONE      = 0x00; // 0000
+const CMD_FLAG_SPAWNED   = 0x01; // 0001
+const CMD_FLAG_ALIVE     = 0x02; // 0010
+const CMD_FLAG_ONFOOT    = 0x04; // 0100
+const CMD_FLAG_INVEHICLE = 0x08; // 1000
 
 // -----------------------------------------------------------------------------
 
@@ -30,21 +30,21 @@ playerCmdPool   <- [];
 newsreelTexts   <-
 [
 	"Type /c cmds to display a list of commands.",
-	"Commands can be prefixed with '!' too, try !cmds instead of /c cmds.",
+	"Commands can be prefixed with '!' too! Try !cmds instead of /c cmds.",
 	"Don't want to spawn where you last died anymore? Type /c diepos to toggle this feature on or off.",
 	"Low on health? Type /c heal to heal yourself.",
-	"Type /c fix to repair a wrecked vehicle.",
+	"Repair a wrecked vehicle by typing /c fix.",
 	"Type /c wep to acquire any weapon(s) you want at any time!",
-	"Remove whatever weapons you have in hand with /c disarm.",
-	"Stuck in a flipped vehicle? Type /c eject to eject yourself from it.",
+	"Ditch whatever weapons you have in hand with /c disarm.",
+	"Stuck in a flipped vehicle? /c eject allows you to eject yourself from it.",
 	"Tired of typing /c wep every time you spawn? /c spawnwep allows you to spawn with any weapons you choose!",
-	"Type /c goto to teleport to a desired player.",
-	"Find and spawn any existing vehicle to your position with /c vehicle."
+	"Type /c goto to teleport to any desired player as long as they allow it.",
+	"Likewise, forbid players from teleporting to you with /c nogoto.",
+	"Find and take any existing vehicle to your position with /c vehicle."
 ];
 newsreelIndex   <- 0;
-commonLocations <- // Could use a class for this
+commonLocations <-
 [
-//  Names                         Pos
 	[["hotel", "oceanbeach"],     Vector(229.76, -1281.61, 12.07)],
 	[["malibu"],                  Vector(497.91, -71.47, 11.48)],
 	[["golf", "leaflinks"],       Vector(85.85, 241.79, 21.58)],
@@ -79,12 +79,13 @@ function onScriptLoad()
 	dofile("scripts/callbacks/timercallbacks.nut");
 	dofile("scripts/callbacks/playercmdhandlers.nut");
 
+	// Load up required data for the server to properly function
 	ApplyServerSettings();
 	AddPlayerCommands();
 	LoadServerTimers();
 
-	print("\n_____________________________");
-	print(SERVER_NAME + " initialized.");
+	print("\n_________________________________");
+	print(SERVER_NAME + " has initialized.");
 }
 
 function onPlayerJoin(player)
@@ -92,7 +93,7 @@ function onPlayerJoin(player)
 	local playerName = player.Name;
 	if (!player.IsNameValid())
 	{
-		Message("Kicking out " + playerName + " for invalid nickname.");
+		Message("Kicking out " + playerName + " due to an invalid nickname used.");
 		KickPlayer(player);
 		return;
 	}
@@ -100,18 +101,15 @@ function onPlayerJoin(player)
 	// Apply ShootInAir global setting to this client
 	player.ShootInAir = GetShootInAir();
 
-	// Create player data if non-existent, otherwise just retrieve whatever data
-	// belonged to this player previously and make it active
+	// Create player's data if non-existent. Otherwise, just retrieve
+	// whatever data previously belonged to this player and make it active
 	player.SetActiveStatus(true);
 
 	InfoMessage("Welcome to " + SERVER_NAME + ", " + playerName + "!", player);
 	InfoMessage("Type /c cmds to view a list of commands.", player);
 
-	// Fuck u Alpays
-	if (playerName.tolower().find("kelvin") != null)
-	{
-		AnnounceAll("Money Success Fame Glamour!", 0);
-	}
+	// Fuck u Alpays  - Kelvin
+	if (playerName.tolower().find("kelvin") != null) { AnnounceAll("Money Success Fame Glamour!", 0); }
 }
 
 function onPlayerPart(player, reason)
@@ -124,7 +122,7 @@ function onPlayerPart(player, reason)
 	if ((GetPlayers() - 1) <= 0)
 	{
 		ResetWorldSettings();
-		print("No players left in the server. Some world settings have been restored.");
+		print("No players left on the server. Some world settings have been restored.");
 	}
 }
 
@@ -159,17 +157,15 @@ function onPlayerSpawn(player)
 
 function onPlayerDeath(player, reason)
 {
-	// Update player's last death position
 	player.SetLastDeathPos((reason != WEP_DROWNED) ? player.Pos : null);
 	player.EndSpree();
 }
 
 function onPlayerKill(killer, player, reason, bodypart)
 {
-	// Update player's last death position
 	player.SetLastDeathPos(player.Pos);
 
-	// (Cosmetic only)
+	// (Cosmetic only - money ain't got no use for this game mode!)
 	local playerCash = player.Cash;
 	killer.Cash += 500;
 	player.Cash = (playerCash > 250) ? (playerCash - 250) : 0;
@@ -182,7 +178,8 @@ function onPlayerChat(player, message)
 {
 	switch (message[0])
 	{
-	// '!'-prefixed commands, needs to simulate '/c'-prefixed commands for consistent behavior
+	// '!'-prefixed commands; follows '/c'-prefixed commands'
+	// implementation for an ideal, consistent behavior
 	case '!':
 		// Remove leading whitespaces from command
 		local cmdText = lstrip(message.slice(1));
@@ -191,7 +188,7 @@ function onPlayerChat(player, message)
 		// Attempt to find command-argument separator (whitespace)
 		local argsPos = cmdText.find(" ");
 		local args = null; // The argument(s)
-		// Arguments were provided for this command
+		// Arguments were indeed provided for this command
 		if (argsPos != null)
 		{
 			args = cmdText.slice(argsPos + 1);
@@ -212,29 +209,29 @@ function onPlayerCommand(player, cmdText, arguments)
 	local cmd = FindPlayerCmd(cmdText);
 	if (!cmd)
 	{
-		ErrorMessage("\"" + cmdText + "\" is an invalid command. Type /c cmds to display a list of commands.", player);
+		ErrorMessage("Invalid command. Type /c cmds to display a list of commands.", player);
 		return;
 	}
 
-	if ((cmd.permissionFlags & PLAYERCMD_FLAG_SPAWNED) && !player.IsSpawned)
+	if ((cmd.permissionFlags & CMD_FLAG_SPAWNED) && !player.IsSpawned)
 	{
 		ErrorMessage("You must be spawned to use this command.", player);
 		return;
 	}
 
-	if ((cmd.permissionFlags & PLAYERCMD_FLAG_ALIVE) && !player.IsAlive())
+	if ((cmd.permissionFlags & CMD_FLAG_ALIVE) && player.IsDying())
 	{
 		ErrorMessage("You cannot use this command while dying.", player);
 		return;
 	}
 
-	if ((cmd.permissionFlags & PLAYERCMD_FLAG_ONFOOT) && player.Vehicle)
+	if ((cmd.permissionFlags & CMD_FLAG_ONFOOT) && player.Vehicle)
 	{
 		ErrorMessage("You must be on foot to use this command.", player);
 		return;
 	}
 
-	if ((cmd.permissionFlags & PLAYERCMD_FLAG_INVEHICLE) && !player.Vehicle)
+	if ((cmd.permissionFlags & CMD_FLAG_INVEHICLE) && !player.Vehicle)
 	{
 		ErrorMessage("You must be in a vehicle to use this command.", player);
 		return;
@@ -252,11 +249,11 @@ function onPlayerEnterVehicle(player, vehicle, isPassenger)
 	case VEH_VOODOO: // Driving voodoos cause a game crash for other players in 0.3z R2.
 		local playerPos = player.Pos;
 		player.Pos = Vector(playerPos.x, playerPos.y, playerPos.z + 10.0);
-		ErrorMessage("Entering " + vehicleName + " is prohibited.", player);
+		ErrorMessage("Entering " + vehicleName + "s is prohibited.", player);
 		break;
 
 	default:
-		PrivMessage("You entered " + GetAOrAn(vehicleName) + " " + vehicleName + " (ID: " + vehicle.ID + ").", player);
+		PrivMessage("You have entered " + GetAOrAn(vehicleName) + " " + vehicleName + " (ID: " + vehicle.ID + ").", player);
 	}
 }
 

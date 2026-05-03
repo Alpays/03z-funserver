@@ -45,20 +45,4 @@ function AddPlayerCmd(handler, permissionFlags, ...)
 	playerCmdPool.append(PlayerCmd(vargv, handler, permissionFlags));
 }
 
-function FindPlayerCmd(identifier)
-{
-	identifier = identifier.tolower();
-	foreach (cmd in playerCmdPool)
-	{
-		foreach (cmdIdentifier in cmd.identifiers)
-		{
-			if (identifier == cmdIdentifier.tolower())
-			{
-				return cmd;
-			}
-		}
-	}
-	return null;
-}
-
 // -----------------------------------------------------------------------------

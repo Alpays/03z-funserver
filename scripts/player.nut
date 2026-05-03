@@ -15,6 +15,7 @@ class PlayerData
 	ownedVehicle        = null;
 	processTimer        = null;
 	spree               = 0;
+	allowedTeleport     = true;
 }
 
 function PlayerData::constructor()
@@ -132,7 +133,7 @@ function Player::IncreaseSpree()
 	}
 	else { hpAddon = 25; }
 
-	if (IsAlive())
+	if (!IsDying())
 	{
 		local newPlayerHealth = (Health + hpAddon);
 		Health = (newPlayerHealth < 100) ? newPlayerHealth : 100;
@@ -145,7 +146,7 @@ function Player::EndSpree(killer = null)
 	if (playerData.spree >= 5)
 	{
 		if (killer) { ::Message(killer.Name + " ended " + Name + "'s killing spree of " + playerData.spree + "!"); }
-		else { ::Message(Name + " ended their own killing spree of " + playerData.spree + "!"); }
+		else { ::Message(Name + " has ended their own killing spree of " + playerData.spree + "!"); }
 	}
 	playerData.spree = 0;
 }
@@ -165,9 +166,9 @@ function Player::IsNameValid()
 		(lowerName != "clear");
 }
 
-function Player::IsAlive()
+function Player::IsDying()
 {
-	return IsSpawned && (Health > 0);
+	return IsSpawned && (Health == 0);
 }
 
 // -----------------------------------------------------------------------------

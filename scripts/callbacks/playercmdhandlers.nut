@@ -54,7 +54,7 @@ function PlayerCmd_Cmds(player, cmdText, arguments)
 function PlayerCmd_Credits(player, cmdText, arguments)
 {
 	Message(SERVER_NAME + " by [SS]Kelvin and [VU]Alpays");
-	Message("Special credits: Hanney (hosting)");
+	Message("Special credits: Hanney (former host)");
 	Message("Requested by " + player.Name + ".");
 }
 
@@ -102,12 +102,12 @@ function PlayerCmd_DiePos(player, cmdText, arguments)
 	case TOGGLECMD_INPUT_DISABLE:
 		if (!player.GetLastDeathPosEnabled())
 		{
-			ErrorMessage("You already spawn at your class' spawn position.", player);
+			ErrorMessage("You already spawn at your class' default position.", player);
 			return;
 		}
 
 		player.SetLastDeathPosEnabled(false);
-		PrivMessage("You will spawn at your class' spawn position from now on.", player);
+		PrivMessage("You will spawn at your class' default position from now on.", player);
 		return;
 
 	case TOGGLECMD_INPUT_ENABLE:
@@ -231,12 +231,12 @@ function PlayerCmd_SpawnWep(player, cmdText, arguments)
 		}
 
 		player.ClearSpawnWeapons();
-		PrivMessage("Your spawn weapons have been cleared.", player);
+		PrivMessage("Spawn weapons cleared.", player);
 		return;
 	}
 
 	local weaponId;
-	local canGiveWeapons = (player.IsAlive() && !GetQuakeMode());
+	local canGiveWeapons = (!player.IsDying() && !GetQuakeMode());
 	local addedWeaponCount = 0;
 	foreach (inputWeapon in split(arguments, " "))
 	{
@@ -290,6 +290,15 @@ function PlayerCmd_Vehicle(player, cmdText, arguments)
 		return;
 	}
 
+	local vehicleModel = vehicle.Model;
+	local vehicleName = GetVehicleNameFromModel(vehicleModel);
+	local t = GetAOrAn(vehicleName) + " " + vehicleName;
+	if (vehicleModel == VEH_HUNTER || vehicleModel == VEH_SEASPARROW)
+	{
+		ErrorMessage("You cannot pull " + t + ".", player);
+		return;
+	}
+
 	local driver = vehicle.Driver;
 	if (driver)
 	{
@@ -332,11 +341,9 @@ function PlayerCmd_Vehicle(player, cmdText, arguments)
 	}
 
 	local playerPos = player.Pos;
-	local vehicleName = GetVehicleNameFromModel(vehicle.Model);
 	vehicle.Pos = Vector((playerPos.x + 5.0), playerPos.y, (playerPos.z - 1.0));
 	playerData.ownedVehicle = vehicle;
-	Message(player.Name + " pulled " + GetAOrAn(vehicleName) + " " + vehicleName + " " +
-		"(ID: " + vehicleId + ") to their position.");
+	Message(player.Name + " pulled " + t + " (ID: " + vehicleId + ") to their position.");
 }
 
 function PlayerCmd_HP(player, cmdText, arguments)
@@ -576,12 +583,57 @@ function PlayerCmd_GoTo(player, cmdText, arguments)
 		return;
 	}
 
+	if (!targetPlayer.GetData().allowedTeleport)
+	{
+		ErrorMessage(targetPlayer.Name + " has forbidden teleportation toward them.", player);
+		return;
+	}
+
 	local playerPos = player.Pos;
 	local targetPlayerName = targetPlayer.Name; // Using name rather than ID is "safer" in this case
 	player.SetProcessTimer(NewTimer(TimerCallback_TeleportPlayerToPlayer, 3000, 1, playerId,
 		targetPlayerName, playerPos.x.tointeger(), playerPos.y.tointeger(), playerPos.z.tointeger()));
 	PrivMessage("Stand still for 3 seconds or teleporting process to " + targetPlayerName + " will be unsuccessful.", player);
 	PrivMessage(player.Name + " is attempting to teleport to you...", targetPlayer);
+}
+
+function PlayerCmd_NoGoTo(player, cmdText, arguments)
+{
+	if (!arguments)
+	{
+		CmdSyntaxMessage(player, cmdText, "on/off");
+		return;
+	}
+
+	local playerData = player.GetData();
+	switch (ValidateToggleCmdInput(arguments))
+	{
+	case TOGGLECMD_INPUT_DISABLE:
+		if (playerData.allowedTeleport)
+		{
+			ErrorMessage("Players are already able to teleport to you.", player);
+			return;
+		}
+
+		playerData.allowedTeleport = true;
+		PrivMessage("Players are now able to teleport to you.", player);
+		return;
+
+	case TOGGLECMD_INPUT_ENABLE:
+		if (!playerData.allowedTeleport)
+		{
+			ErrorMessage("Players are already unable to teleport to you.", player);
+			return;
+		}
+
+		playerData.allowedTeleport = false;
+		PrivMessage("Players are no longer able to teleport to you.", player);
+		return;
+
+	default:
+		ErrorMessage("Invalid option.", player);
+		return;
+	}
 }
 
 function PlayerCmd_Ann(player, cmdText, arguments)
@@ -608,7 +660,7 @@ function PlayerCmd_Ann(player, cmdText, arguments)
 	}
 
 	local playerName = player.Name;
-	if (niceTry) { Message(playerName + " is a fucking idiot. Everybody is free to bully him."); }
+	if (niceTry) { Message(playerName + " is a fucking idiot. Everybody is free to bully them."); }
 	AnnounceAll(message, 0);
 	Message(playerName + " announced: " + message);
 }
@@ -686,14 +738,15 @@ function PlayerCmd_Time(player, cmdText, arguments)
 		return;
 	}
 
+	local t = format("%02d:%02d", newHour, newMinute);
 	if ((newHour == GetHour()) && (newMinute == GetMinute()))
 	{
-		ErrorMessage(format("Time is already set to %02d:%02d.", newHour, newMinute), player);
+		ErrorMessage("Time is already set to " + t + ".", player);
 		return;
 	}
 
 	SetTime(newHour, newMinute);
-	Message(format("%s changed time to %02d:%02d.", player.Name, newHour, newMinute));
+	Message(player.Name + " changed time to " + t + ".");
 }
 
 function PlayerCmd_TimeRate(player, cmdText, arguments)
@@ -733,7 +786,7 @@ function PlayerCmd_GameSpeed(player, cmdText, arguments)
 
 	if (!IsFloat(arguments))
 	{
-		ErrorMessage("Game speed must be convertible to float.", player);
+		ErrorMessage("Game speed must be convertible to decimal.", player);
 		return;
 	}
 
@@ -765,7 +818,7 @@ function PlayerCmd_Gravity(player, cmdText, arguments)
 
 	if (!IsFloat(arguments))
 	{
-		ErrorMessage("Gravity must be convertible to float.", player);
+		ErrorMessage("Gravity must be convertible to decimal.", player);
 		return;
 	}
 
@@ -791,7 +844,7 @@ function PlayerCmd_WaterLevel(player, cmdText, arguments)
 
 	if (!IsFloat(arguments))
 	{
-		ErrorMessage("Water level must be convertible to float.", player);
+		ErrorMessage("Water level must be convertible to decimal.", player);
 		return;
 	}
 

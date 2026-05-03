@@ -45,7 +45,7 @@ function TimerCallback_HealPlayer(playerId, initialPosX, initialPosY, initialPos
 	player.ClearProcessTimer();
 
 	if (!player.IsSpawned)    { ErrorMessage("Healing process aborted as you are no longer spawned.", player);           return; }
-	if (!player.IsAlive())    { ErrorMessage("Healing process aborted as you are no longer alive.", player);             return; }
+	if (player.IsDying())     { ErrorMessage("Healing process aborted as you are no longer alive.", player);             return; }
 	if (player.Vehicle)       { ErrorMessage("Healing process aborted as you are no longer on foot.", player);           return; }
 	if (player.Health >= 100) { ErrorMessage("Healing process aborted as you don't need to be healed anymore.", player); return; }
 	local playerPos = player.Pos;
@@ -58,7 +58,7 @@ function TimerCallback_HealPlayer(playerId, initialPosX, initialPosY, initialPos
 	}
 
 	player.Health = 100;
-	Message(player.Name + " healed.");
+	Message(player.Name + " has healed.");
 }
 
 function TimerCallback_FixPlayerVehicle(playerId, vehicleId, initialPosX, initialPosY, initialPosZ)
@@ -111,7 +111,7 @@ function TimerCallback_FixPlayerVehicle(playerId, vehicleId, initialPosX, initia
 	}
 
 	playerVehicle.Fix();
-	Message(player.Name + " repaired their vehicle.");
+	Message(player.Name + " has repaired their vehicle.");
 }
 
 function TimerCallback_TeleportPlayerToCommonLocation(playerId, locId, locNameId, initialPosX, initialPosY, initialPosZ)
@@ -122,7 +122,7 @@ function TimerCallback_TeleportPlayerToCommonLocation(playerId, locId, locNameId
 	player.ClearProcessTimer();
 
 	if (!player.IsSpawned) { ErrorMessage("Teleportation process aborted as you are no longer spawned.", player); return; }
-	if (!player.IsAlive()) { ErrorMessage("Teleportation process aborted as you are no longer alive.", player);   return; }
+	if (player.IsDying())  { ErrorMessage("Teleportation process aborted as you are no longer alive.", player);   return; }
 	if (player.Vehicle)    { ErrorMessage("Teleportation process aborted as you are no longer on foot.", player); return; }
 	local playerPos = player.Pos;
 	if ((playerPos.x.tointeger() != initialPosX) ||
@@ -135,7 +135,7 @@ function TimerCallback_TeleportPlayerToCommonLocation(playerId, locId, locNameId
 
 	local loc = commonLocations[locId];
 	player.Pos = loc[1];
-	Message(player.Name + " teleported to common location \"" + loc[0][locNameId] + "\".");
+	Message(player.Name + " has teleported to common location \"" + loc[0][locNameId] + "\".");
 }
 
 function TimerCallback_TeleportPlayerToPlayer(playerId, targetPlayerName, initialPosX, initialPosY, initialPosZ)
@@ -151,7 +151,7 @@ function TimerCallback_TeleportPlayerToPlayer(playerId, targetPlayerName, initia
 		return;
 	}
 
-	if (!player.IsAlive())
+	if (player.IsDying())
 	{
 		ErrorMessage("Teleportation process aborted as you are no longer alive.", player);
 		return;
@@ -187,7 +187,7 @@ function TimerCallback_TeleportPlayerToPlayer(playerId, targetPlayerName, initia
 	}
 
 	player.Pos = targetPlayer.Pos;
-	Message(player.Name + " teleported to " + targetPlayer.Name + ".");
+	Message(player.Name + " has teleported to " + targetPlayer.Name + ".");
 }
 
 // -----------------------------------------------------------------------------

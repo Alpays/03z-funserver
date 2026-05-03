@@ -72,7 +72,7 @@ function SetQuakeMode(toggle)
 		SetShootInAir(true);
 		for(local i = 0; i < MAX_PLAYERS; ++i) {
 			local p = FindPlayer(i);
-			if(p && p.IsAlive()) {
+			if(p && !p.IsDying()) {
 				p.SetWeapon(WEP_FIST, 0);
 				p.SetWeapon(WEP_ROCKETLAUNCHER, 15000);
 			}
@@ -85,7 +85,7 @@ function SetQuakeMode(toggle)
 		for (local i = 0, plr; i < MAX_PLAYERS; ++i)
 		{
 			plr = FindPlayer(i);
-			if (plr && plr.IsAlive())
+			if (plr && !plr.IsDying())
 			{
 				plr.GiveSpawnWeapons();
 			}
@@ -129,6 +129,24 @@ function CmdSyntaxMessage(player, cmdText, ...)
 		paramList += paramList.len() ? ", <" + param + ">" : "<" + param + ">";
 	}
 	PrivMessage("Command syntax: /c " + cmdText.tolower() + " " + paramList, player);
+}
+
+// -----------------------------------------------------------------------------
+
+function FindPlayerCmd(identifier)
+{
+	identifier = identifier.tolower();
+	foreach (cmd in playerCmdPool)
+	{
+		foreach (cmdIdentifier in cmd.identifiers)
+		{
+			if (identifier == cmdIdentifier.tolower())
+			{
+				return cmd;
+			}
+		}
+	}
+	return null;
 }
 
 // -----------------------------------------------------------------------------
